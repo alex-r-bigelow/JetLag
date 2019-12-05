@@ -2,30 +2,20 @@ import inspect
 from datetime import datetime
 from urllib.parse import quote_plus
 import requests
-from IPython.core.display import display, HTML
-from TwoWayWebView import TwoWayWebView
+try:
+    from IPython.core.display import display, HTML
+except:
+    pass
 from random import random
 
 base_url = "http://localhost:8100"
 
-def visualizeInTraveler(fun):
-    widget = TwoWayWebView(filename='uploadWidget.html')
-    display(widget)
-
-    label = 'Jupyter@' + datetime.now().isoformat()
-    widget.sendObject({'datasetLabel': label})
-    url = base_url+'/datasets/%s' % quote_plus(label)
-    response = requests.post(url, stream=True, json={
-        'csv': fun.__perfdata__[0],
-        'newick': fun.__perfdata__[1],
-        'dot': fun.__perfdata__[2],
-        'physl': fun.__src__,
-        'python': inspect.getsource(fun.backend.wrapped_function)
-    })
-    for line in response.iter_lines(decode_unicode=True):
-        widget.sendObject({'messageChunk': line})
-    widget.sendObject({'done': True})
-    return response
+def in_notebook():
+    try:
+        get_ipython().config
+        return True
+    except:
+        return False
 
 def visualizeRemoteInTraveler(jobid):
 
@@ -53,11 +43,8 @@ def visualizeRemoteInTraveler(jobid):
         traceback.print_exc()
         return
 
-    widget = TwoWayWebView(filename='uploadWidget.html')
-
     label += "@"+jobid
 
-    widget.sendObject({'datasetLabel': label})
     url = base_url + '/datasets/%s' % quote_plus(label)
 
     response = requests.post(url, stream=True, json={
@@ -67,9 +54,8 @@ def visualizeRemoteInTraveler(jobid):
         'physl': physl_src,
         'python': py_src
     })
-    for line in response.iter_lines(decode_unicode=True):
-        widget.sendObject({'messageChunk': line})
-    widget.sendObject({'done': True})
-    #display(widget)
-    display(HTML("<a target='the-viz' href='"+base_url+"/static/interface.html?x=%f'>%s</a>" % (random(), label)))
+    if in_notebook():
+        display(HTML("<a target='the-viz' href='"+base_url+"/static/interface.html?x=%f'>%s</a>" % (random(), label)))
+    else:
+        print("URL:",base_url+"/static/interface.html")
     return response

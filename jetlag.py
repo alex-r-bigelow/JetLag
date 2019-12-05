@@ -30,25 +30,28 @@ import importlib.machinery
 
 os.environ["AGAVE_JSON_PARSER"]="jq"
 
+has_color = False
 if sys.stdout.isatty():
     try:
         # Attempt to import termcolor...
         from termcolor import colored
+        has_color = True
     except:
         # If this fails, attempt to install it...
         try:
             from pip import main as pip_main
-        except ImportError:
-            from pip._internal import main as pip_main
-        
+        except:
+            try:
+                from pip._internal import main as pip_main
+            except:
+                pass
         try:
             pip_main(["install", "--user", "termcolor"])
-        except SystemExit as e:
-            # Give up. No colors. :(
-            def colored(a,_):
-                return a
+            has_color = True
+        except:
+            pass
 
-else:
+if not has_color:
     # Don't colorize anything if
     # this isn't a tty
     def colored(a,_):

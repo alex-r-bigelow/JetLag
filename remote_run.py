@@ -1,4 +1,4 @@
-from sweetnsaasy import Universal, pp, mk_input, pcmd, RemoteJobWatcher
+from jetlag import Universal, pp, mk_input, pcmd, RemoteJobWatcher
 from knownsystems import *
 from time import sleep
 import os

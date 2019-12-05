@@ -1,4 +1,4 @@
-# sweetnsaasy
+# jetlag
 Custom interface to both Agave and Tapis for running and monitoring jobs.
 
 The basic concept of universal is:
