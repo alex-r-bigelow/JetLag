@@ -1,5 +1,5 @@
 # jetlag
-Custom interface to both Agave and Tapis for running and monitoring jobs.
+Custom interface to both Agave and Tapis for running and monitoring jobs, with connections to traveler for performance visualization.
 
 The basic concept of universal is:
 1. to use either Tapis or Agave
@@ -11,3 +11,5 @@ The basic concept of universal is:
    1. takes `input.tgz`
    2. unpacks and executes `run_dir/runapp.sh` from inside the `run_dir/` directory
    3. packs everything up into `output.tgz`
+
+
