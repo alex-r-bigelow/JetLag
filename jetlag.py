@@ -225,7 +225,7 @@ class Universal:
     """
     def __init__(self):
 
-        self.auth_mtime = 0
+        self.auth_age = 0
 
         # Required options with default values.
         # Values of "uknown" or -666 mean the
@@ -412,10 +412,15 @@ class Universal:
 
     def getauth(self):
         auth_file = self.get_auth_file()
+        auth_age = os.path.getmtime(auth_file)
+        if auth_age == self.auth_age:
+            return self.auth_data
+        self.auth_age = auth_age
         with open(auth_file,"r") as fd:
             auth_data = json.loads(fd.read())
         self.values["apiurl"] = auth_data["baseurl"]
         self.values["authtoken"] = auth_data["access_token"]
+        self.auth_data = auth_data
         return auth_data
 
     def getheaders(self,data=None):
@@ -1150,7 +1155,7 @@ class Universal:
             ret += [re.sub(r'^(property-|)','property-',k)]
         return ret
 
-    def run_job(self, job_name, input_tgz, jtype='fork', run_time = None, sets_props = {}, needs_props = {}):
+    def run_job(self, job_name, input_tgz=None, jtype='fork', run_time = None, sets_props = {}, needs_props = {}):
         """
         Run a job. It must have a name and an input tarball. It will default
         to running in a queue, but fork can also be requested. Specifying
@@ -1164,7 +1169,8 @@ class Universal:
                 print("Property '%s' is already set" % k)
                 return None
 
-        mk_input(input_tgz)
+        if input_tgz is not None:
+            mk_input(input_tgz)
 
         if run_time is None:
             run_time = self.values["max_run_time"]
@@ -1439,6 +1445,27 @@ class Universal:
         jdata = response.json()["result"]
         return jdata
 
+    def job_history(self, jobid):
+        headers = self.getheaders()
+        pause()
+        response = requests.get(self.fill("{apiurl}/jobs/v2/")+jobid+'/history/', headers=headers)
+        if response.status_code == 404:
+            return None
+        check(response)
+        jdata = response.json()["result"]
+        return jdata
+
+    def job_list(self, num):
+        headers = self.getheaders()
+        params = (
+            ('limit','10'),
+        )
+        pause()
+        response = requests.get(self.fill("{apiurl}/jobs/v2/"), headers=headers)
+        check(response)
+        jdata = response.json()["result"]
+        return jdata
+
     def wait_for_job(self,jobid):
         last_status = ""
         while True:
@@ -1494,8 +1521,20 @@ class Universal:
         else:
             print("KEY IS INSTALLED")
 
-    def show_job(self,jobid,dir=''):
-        if dir == "":
+    def get_app_pems(self,app='queue'):
+        headers = self.getheaders()
+        if app == 'fork':
+            app_name = self.values["fork_app_name"]
+        else:
+            app_name = self.values["app_name"]
+        version = self.values["app_version"]
+        response = requests.get(self.fill("{apiurl}/apps/v2/"+app_name+"-"+version+"/pems"), headers=headers)
+        check(response)
+        jdata = response.json()
+        return jdata["result"][0]["permission"]
+
+    def show_job(self,jobid,dir='',verbose=True):
+        if dir == "" and verbose:
             print(colored("Output for job: "+jobid,"magenta"))
 
         headers = self.getheaders()
@@ -1503,21 +1542,27 @@ class Universal:
         response = requests.get(self.fill("{apiurl}/jobs/v2/")+jobid+"/outputs/listings/"+dir, headers=headers, params=params)
         check(response)
         jdata = response.json()["result"]
+        outs = []
         for fdata in jdata:
             fname = fdata["path"]
-            print(colored("File:","blue"),fname)
+            if verbose:
+                print(colored("File:","blue"),fname)
             if fdata["format"] == "folder":
-                self.show_job(jobid,fname)
+                outs += self.show_job(jobid,fname,verbose)
                 continue
+            else:
+                outs += [fname]
             if dir != '':
                 continue
             g = re.match(r'.*\.(out|err)$',fname)
             if g:
                 contents = self.get_file(jobid, fname)
-                if g.group(1) == "out":
-                    print(colored(contents,"green"),end='')
-                else:
-                    print(colored(contents,"red"),end='')
+                if verbose:
+                    if g.group(1) == "out":
+                        print(colored(contents,"green"),end='')
+                    else:
+                        print(colored(contents,"red"),end='')
+        return outs
 
 if __name__ == "__main__":
     from knownsystems import *
@@ -1534,3 +1579,13 @@ if __name__ == "__main__":
         pp.pprint(j1.full_status())
     elif sys.argv[3] == "poll":
         uv.poll()
+    elif sys.argv[3] == "meta":
+        for m in uv.get_meta(sys.argv[4]):
+            pp.pprint(m)
+    elif sys.argv[3] == "jobs":
+        for j in uv.job_list(10):
+            pp.pprint(j)
+    elif sys.argv[3] == "history":
+        jobid = sys.argv[4]
+        hist = uv.job_history(jobid)
+        pp.pprint(hist)
