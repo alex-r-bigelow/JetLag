@@ -20,7 +20,7 @@ backends = {
 }
 
 shelob = {
-  "machine_user" : 'funwave',
+  "machine_user" : '{SHELOB_USER}',
   "machine" : 'shelob',
   "domain" : "hpc.lsu.edu",
   "queue" : "checkpt",
@@ -42,7 +42,7 @@ shelob = {
 }
 
 rostam = {
-  "machine_user" : 'sbrandt',
+  "machine_user" : '{ROSTAM_USER}',
   "machine" : 'rostam',
   "domain" : "cct.lsu.edu",
   "port" : 8000,
