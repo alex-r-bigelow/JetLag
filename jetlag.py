@@ -589,10 +589,8 @@ class Universal:
             storage_update = (check_data(storage, json_data) > 0)
         else:
             storage_update = True
-        print("storage update:",storage_update)
 
         if storage_update or (not self.check_machine(storage_id)):
-            print("Updating",storage_id,"...")
             json_storage = json.dumps(storage)
             headers = self.getheaders(json_storage)
             response = requests.post(
@@ -614,6 +612,16 @@ class Universal:
         check(response)
         return response.json()["result"]
 
+    def job_by_name(self,name):
+        headers = self.getheaders()
+        params = (
+            ('name', name),
+        )
+        response = requests.get(
+            self.fill('{apiurl}/jobs/v2'), headers=headers, params=params)
+        check(response)
+        return response.json()["result"]
+
     def job_cleanup(self):
         """
         Job cleanup walks through the job directory
@@ -631,47 +639,35 @@ class Universal:
         for f in fdata:
             if f["format"] == "folder":
                 job_name = f["name"]
+
+                if not re.match(r'[\w-]{10,}',job_name):
+                    print("Invalid job name:",job_name)
+                    continue
+
                 headers = self.getheaders()
-                params = (
-                    ('pretty', 'true'),
-                    ('limit', '1'),
-                    ('filter', 'id,name'),
-                    ('name.like', job_name),
-                    ('owner.eq', self.values['sys_user']),
-                )
-                
-                response = requests.get(
-                    self.fill('{apiurl}/jobs/v2'), headers=headers, params=params)
+                jdata = self.job_by_name(job_name)
+                if len(jdata) == 0:
+                    print("Could not lookup job by name:",job_name)
+                    continue
+                elif len(jdata) > 1:
+                    print("Multiple jobs with name:",job_name)
+                    continue
+                jentry = jdata[0]
+
+                if "status" not in jentry.keys():
+                    continue
+
+                if jentry["status"] not in ["FINISHED", "FAILED", "BLOCKED"]:
+                    continue
+
+                jobid = jentry["id"]
+
+                headers = self.getheaders()
+                pause()
+                print("Deleting job data for:",job_name,jobid)
+                response = requests.delete(
+                    self.fill('{apiurl}/files/v2/media/system/{storage_id}/{job_dir}/'+job_name), headers=headers)
                 check(response)
-                jdata = response.json()["result"]
-
-                for jentry in jdata:
-                    if "id" not in jentry.keys():
-                        continue
-                    jobid = jentry["id"]
-    
-                    jstat = self.job_status(jobid)
-                    if jstat is None:
-                        continue
-    
-                    if jstat["status"] not in ["FINISHED", "FAILED", "BLOCKED"]:
-                        continue
-
-                    #try:
-                    #    self.show_job(jobid)
-                    #except:
-                    #    print("Job:",jobid,"cannot be displayed")
-    
-                    headers = self.getheaders()
-                    for tri in range(3):
-                        try:
-                            response = requests.delete(
-                                self.fill('{apiurl}/files/v2/media/system/{storage_id}/{job_dir}/'+f["name"]), headers=headers)
-                            break
-                        except:
-                            sleep(pause_time)
-
-                    check(response)
 
     def create_or_refresh_token(self):
         auth_file = self.get_auth_file()
@@ -1293,17 +1289,10 @@ class Universal:
             return job_name
 
     def poll(self):
-        for data in self.get_meta('jobdata-*'):
+        for data in self.get_meta('jobdata-.*'):
             g = re.match(r'jobdata-(.*)',data['name'])
             job_name = g.group(1)
             m = data["value"]
-            if "machine" not in m:
-                mach = m['job']['archiveSystem']
-                g = re.match(r'(.*)-storage-(.*)',mach)
-                m["machine"] = g.group(1)
-            if m["machine"] != self.values["machine"]:
-                print("skipping",m["machine"],"!=",self.values["machine"])
-                continue
             if "jobid" in m:
                 done = False
                 success = True
@@ -1347,11 +1336,24 @@ class Universal:
                     #print("Cleaning up...",data["value"]["jobid"])
                     headers = self.getheaders()
                     pause()
-                    response = requests.delete(
-                        self.fill('{apiurl}/files/v2/media/system/{storage_id}/{job_dir}/')+job_name, headers=headers)
+                    jdata = self.job_status(m["jobid"]) # yyy
+                    fname = jdata['inputs']['input tarball']
+                    if self.is_tapis():
+                        assert type(fname) == str, fname
+                    else:
+                        assert type(fname) == list, fname
+                        fname = fname[0]
+                    jg = re.match(r'^agave://([\w-]+)/(.*)/input\.tgz$',fname)
+                    assert jg is not None, fname
+                    jmach = jg.group(1)
+                    jdir = jg.group(2)
+                    jloc = jmach+'/'+jdir
+                    print("Cleanup:",jloc,"...",end='')
+                    pause()
+                    response = requests.delete(self.fill('{apiurl}/files/v2/media/system/')+jloc, headers=headers)
                     #check(response)
                     self.del_meta(data)
-                    #print("  ...done")
+                    print("  ...done")
 
             elif "job" in m:
                 ready = True
@@ -1580,7 +1582,10 @@ if __name__ == "__main__":
     elif sys.argv[3] == "poll":
         uv.poll()
     elif sys.argv[3] == "meta":
+        n = 0
         for m in uv.get_meta(sys.argv[4]):
+            n += 1
+            print(n,": ",sep='',end='')
             pp.pprint(m)
     elif sys.argv[3] == "jobs":
         for j in uv.job_list(10):
@@ -1589,3 +1594,14 @@ if __name__ == "__main__":
         jobid = sys.argv[4]
         hist = uv.job_history(jobid)
         pp.pprint(hist)
+    elif sys.argv[3] == 'job-name':
+        jdata = uv.job_by_name(sys.argv[4])
+        pp.pprint(jdata)
+    elif sys.argv[3] == 'cleanup':
+        uv.job_cleanup()
+    elif sys.argv[3] == 'hello':
+        jobid = uv.hello_world_job()
+        jw = RemoteJobWatcher(uv,jobid)
+        jw.wait()
+    elif sys.argv[3] == 'ssh-config':
+        uv.configure_from_ssh_keys()
