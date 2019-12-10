@@ -237,7 +237,7 @@ class Universal:
           "backend" : {},
           "email" : 'unknown',
           "sys_user" : 'unknown',
-          "sys_pw" : 'unknown',
+          "sys_pw" : '?',
           "machine_user" : '{machine_user}',
           "machine" : 'unknown',
           "domain" : "unknown",
@@ -297,7 +297,7 @@ class Universal:
         self.values["work_dir"] = re.sub(r'/$','',m["workDir"])
         self.values["scratch_dir"] = re.sub(r'/$','',m["scratchDir"])
         self.values["port"] = m["storage"]["port"]
-        self.values = self.fill(self.values)
+        #self.values = self.fill(self.values)
 
         # Check for missing values
         for k in self.values:
