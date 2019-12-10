@@ -1,17 +1,17 @@
 backend_agave = {
   "baseurl" : "https://sandbox.agaveplatform.org",
   "tenant" : "sandbox",
-  "user" : "sbrandt",
+  "user" : "{AGAVE_USER}",
   "utype" : "agave",
-  "pass" : "AGAVE_PASSWORD"
+  "pass" : "{AGAVE_PASSWORD}",
 }
 
 backend_tapis = {
+  "baseurl" : "https://api.tacc.utexas.edu",
   "tenant" : "tacc.prod",
-  "user" : "tg457049",
+  "user" : "{TAPIS_USER}",
   "utype" : "tapis",
-  "pass" : "TAPIS_PASSWORD",
-  "baseurl" : "https://api.tacc.utexas.edu"
+  "pass" : "{TAPIS_PASSWORD}",
 }
 
 backends = {

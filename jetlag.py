@@ -27,6 +27,7 @@ from copy import copy, deepcopy
 from datetime import datetime
 import codecs, pickle
 import importlib.machinery
+from getpass import getpass
 
 os.environ["AGAVE_JSON_PARSER"]="jq"
 
@@ -159,7 +160,7 @@ def mk_input(input_tgz):
             print(input_tgz[k].strip(),file=fd)
     pcmd(["tar","czf","input.tgz","run_dir"])
 
-def load_pass(pass_var):
+def load_input(pass_var,is_password):
     """
     Load a password either from an environment variable or a file.
     """
@@ -171,8 +172,10 @@ def load_pass(pass_var):
         os.environ[pass_var] = readf(pfname).strip()
         return os.environ[pass_var]
 
-    from getpass import getpass
-    os.environ[pass_var] = getpass(pass_var+": ").strip()
+    if is_password:
+        os.environ[pass_var] = getpass(pass_var+": ").strip()
+    else:
+        os.environ[pass_var] = input(pass_var+": ").strip()
     return os.environ[pass_var]
 
 class RemoteJobWatcher:
@@ -234,6 +237,7 @@ class Universal:
           "backend" : {},
           "email" : 'unknown',
           "sys_user" : 'unknown',
+          "sys_pw" : 'unknown',
           "machine_user" : '{machine_user}',
           "machine" : 'unknown',
           "domain" : "unknown",
@@ -331,7 +335,8 @@ class Universal:
             assert type(self.values[k]) == type(kwargs[k]),\
                 "The type of arg '%s' should be '%s'" % (k, str(type(self.values[k])))
             self.values[k] = kwargs[k]
-        self.values = self.fill(self.values)
+        #self.values = self.fill(self.values)
+        self.values["sys_pw"] = self.values["backend"]["pass"]
         self.create_or_refresh_token()
 
         # Check for missing values
@@ -396,7 +401,6 @@ class Universal:
             assert bk in backend.keys(), "key '%s' is required in backend: %s" % (bk,str(backend))
         self.values["sys_user"] = sys_user = backend["user"]
         pass_var = backend["pass"]
-        #sys_pw = load_pass(pass_var)
         self.values["sys_pw_env"] = pass_var
         tenant = backend["tenant"]
         self.values["tenant"] = backend["tenant"]
@@ -475,10 +479,19 @@ class Universal:
                     li = g.end(0)
                     key = g.group(1)
                     assert key not in cycle, key+":"+s
+
+                    val = None
                     if key in self.values.keys():
                         cy = copy(cycle)
-                        cy[key]=1
                         val = self.fill(self.values[key],cy)
+                        cy[key]=1
+                    else:
+                        if re.match(r'.*_USER$',key):
+                            val = load_input(key,False)
+                        elif re.match(r'.*_PASSWORD$',key):
+                            val = load_input(key,True)
+
+                    if val is not None:
                         ns += str(val)
                         done = False
                     else:
@@ -496,8 +509,8 @@ class Universal:
         Completely configure the univeral system
         starting from a password.
         """
-        if self.pw_auth["password"] == "":
-            self.pw_auth["password"] = load_pass(self.values["machine"].upper()+"_PASSWORD")
+        #if self.pw_auth["password"] == "":
+        #    self.pw_auth["password"] = load_pass(self.values["machine"].upper()+"_PASSWORD")
         self.set_auth_type("PASSWORD")
         self.mk_storage(force=True)
         self.install_key()
@@ -684,8 +697,10 @@ class Universal:
         #self.values["apiurl"] = backend["baseurl"]
 
         if "sys_pw" not in self.values:
-            self.values["sys_pw"] = load_pass(self.values["sys_pw_env"])
+            self.values["sys_pw"] = self.values["backend"]["pass"]
 
+        self.values["sys_user"] = self.fill(self.values["sys_user"])
+        self.values["sys_pw"] = self.fill(self.values["sys_pw"])
         auth = (
             self.values["sys_user"],
             self.values["sys_pw"]
@@ -775,10 +790,8 @@ class Universal:
             auth_data['apisecret']
         )
         try:
-            print("refresh...")
             response = requests.post(
                 self.fill('{apiurl}/token'), headers=headers, data=data, auth=auth)
-            print("refresh done")
             check(response)
             jdata = response.json()
             auth_data["refresh_token"] = jdata["refresh_token"]
