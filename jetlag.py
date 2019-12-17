@@ -183,6 +183,7 @@ class RemoteJobWatcher:
         self.uv = uv
         self.jobid = jobid
         self.last_status = "EMPTY"
+        self.jdata = None
 
     def wait(self):
         s = None
@@ -200,12 +201,19 @@ class RemoteJobWatcher:
         if hasattr(self,"result"):
             return self.result
         if self.status() == "FINISHED":
-            if not os.path.exists(self.jobid):
-                os.makedirs(self.jobid, exist_ok=True)
-                self.uv.get_file(self.jobid,"output.tgz",self.jobid+"/output.tgz")
-                pcmd(["tar","xvf","output.tgz"],cwd=self.jobid)
-            if os.path.exists(self.jobid+'/run_dir/result.py'):
-              modulename = importlib.machinery.SourceFileLoader('rr',self.jobid+'/run_dir/result.py').load_module()
+            jobdir="jobdata-"+self.jobid
+            if not os.path.exists(jobdir):
+                os.makedirs(jobdir, exist_ok=True)
+                self.uv.get_file(self.jobid,"output.tgz",jobdir+"/output.tgz")
+                pcmd(["tar","xf","output.tgz"],cwd=jobdir)
+                if self.jdata is None:
+                    self.status(self.jobid)
+                outs = self.uv.show_job(self.jobid,verbose=False,recurse=False)
+                for out in outs:
+                    if re.match(r'.*(\.(out|err))$',out):
+                        self.uv.get_file(self.jobid, out, jobdir+"/"+re.sub(r'.*\.','job.',out))
+            if os.path.exists(jobdir+'/run_dir/result.py'):
+              modulename = importlib.machinery.SourceFileLoader('rr',jobdir+'/run_dir/result.py').load_module()
               self.result = pickle.loads(codecs.decode(modulename.result,'base64'))
             else:
               self.result = None
@@ -218,8 +226,8 @@ class RemoteJobWatcher:
     def status(self):
         if self.last_status in ["FAILED","FINISHED","BLOCKED"]:
             return self.last_status
-        jdata = self.uv.job_status(self.jobid)
-        self.last_status = jdata["status"]
+        self.jdata = self.full_status()
+        self.last_status = self.jdata["status"]
         return self.last_status
 
 class Universal:
@@ -964,8 +972,8 @@ class Universal:
               true # this command does nothing
               $(${AGAVE_JOB_CALLBACK_FAILURE})
             fi
-            tar czf output.tgz run_dir
             echo "EXIT($rc)" > run_dir/return_code.txt
+            tar czf output.tgz run_dir
         }
         trap handle_trap ERR EXIT
         set -ex
@@ -1551,7 +1559,7 @@ class Universal:
         jdata = response.json()
         return jdata["result"][0]["permission"]
 
-    def show_job(self,jobid,dir='',verbose=True):
+    def show_job(self,jobid,dir='',verbose=True,recurse=True):
         if dir == "" and verbose:
             print(colored("Output for job: "+jobid,"magenta"))
 
@@ -1566,7 +1574,8 @@ class Universal:
             if verbose:
                 print(colored("File:","blue"),fname)
             if fdata["format"] == "folder":
-                outs += self.show_job(jobid,fname,verbose)
+                if recurse:
+                    outs += self.show_job(jobid,fname,verbose)
                 continue
             else:
                 outs += [fname]
@@ -1595,6 +1604,9 @@ if __name__ == "__main__":
     if sys.argv[3] == "job-status":
         j1 = RemoteJobWatcher(uv, sys.argv[4])
         pp.pprint(j1.full_status())
+    elif sys.argv[3] == "get-result":
+        j1 = RemoteJobWatcher(uv, sys.argv[4])
+        j1.get_result()
     elif sys.argv[3] == "poll":
         uv.poll()
     elif sys.argv[3] == "meta":
