@@ -945,6 +945,7 @@ class Universal:
         wrapper = """#!/bin/bash
         handle_trap() {
             rc=$?
+            set +x
             if [ "$rc" != 0 ]
             then
               true # this command does nothing
@@ -957,6 +958,8 @@ class Universal:
         set -ex
 
         tar xzvf input.tgz
+        export AGAVE_JOB_NODE_COUNT=${AGAVE_JOB_NODE_COUNT}
+        export AGAVE_JOB_PROCESSORS_PER_NODE=${AGAVE_JOB_PROCESSORS_PER_NODE}
         (cd ./run_dir && source ./runapp.sh)
         """
 
