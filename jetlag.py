@@ -15,6 +15,7 @@
 
 import requests
 import pprint
+from math import log, ceil
 from subprocess import Popen, PIPE
 import sys
 import os
@@ -72,14 +73,33 @@ def age(fname):
 
 last_time = time()
 pause_time = 5.1
-def pause():
+def old_pause():
     global last_time
     now = time()
     sleep_time = last_time + pause_time - now
     if sleep_time > 0:
-        #print("pause(",sleep_time,")",sep='')
         sleep(sleep_time)
     last_time = time()
+
+last_time_array = []
+
+def pause():
+    global last_time_array
+    now = time()
+    last_time_array += [now]
+
+    nback = 3
+    nsec = 10
+    nmargin = 5
+
+    if len(last_time_array) > nback:
+        if now - last_time_array[-nback] < nsec:
+            stime = nsec - now + last_time_array[-nback]
+            sleep(stime)
+    else:
+        old_pause()
+    if len(last_time_array) > nback + nmargin:
+        last_time_array = last_time_array[-nback:]
 
 def check(response):
     """
@@ -95,7 +115,6 @@ def idstr(val,max_val):
     job name.
     """
     assert val < max_val
-    from math import log
     d = int(log(max_val,10))+1
     fmt = "%0" + str(d) + "d"
     return fmt % val
@@ -979,8 +998,11 @@ class Universal:
         set -ex
 
         tar xzvf input.tgz
-        export AGAVE_JOB_NODE_COUNT=${AGAVE_JOB_NODE_COUNT}
-        export AGAVE_JOB_PROCESSORS_PER_NODE=${AGAVE_JOB_PROCESSORS_PER_NODE}
+        echo "export AGAVE_JOB_NODE_COUNT=${AGAVE_JOB_NODE_COUNT}" > .env
+        echo "export AGAVE_JOB_PROCESSORS_PER_NODE=${AGAVE_JOB_PROCESSORS_PER_NODE}" >> .env
+        echo "export nx=${nx}" >> .env
+        echo "export ny=${ny}" >> .env
+        echo "export nz=${nz}" >> .env
         (cd ./run_dir && source ./runapp.sh)
         """
 
@@ -1095,6 +1117,78 @@ class Universal:
                     "maxCardinality": 1,
                     "ontology": []
                   }
+                },
+                {
+                  "id": "nx",
+                  "value": {
+                    "visible": True,
+                    "required": False,
+                    "type": "number",
+                    "order": 0,
+                    "enquote": False,
+                    "default": 0,
+                    "validator": None
+                  },
+                  "details": {
+                    "label": "NX",
+                    "description": "Processors in the X direction",
+                    "argument": None,
+                    "showArgument": False,
+                    "repeatArgument": False
+                  },
+                  "semantics": {
+                    "minCardinality": 0,
+                    "maxCardinality": 1,
+                    "ontology": []
+                  }
+                },
+                {
+                  "id": "ny",
+                  "value": {
+                    "visible": True,
+                    "required": False,
+                    "type": "number",
+                    "order": 0,
+                    "enquote": False,
+                    "default": 0,
+                    "validator": None
+                  },
+                  "details": {
+                    "label": "NY",
+                    "description": "Processors in the Y direction",
+                    "argument": None,
+                    "showArgument": False,
+                    "repeatArgument": False
+                  },
+                  "semantics": {
+                    "minCardinality": 0,
+                    "maxCardinality": 1,
+                    "ontology": []
+                  }
+                },
+                {
+                  "id": "nz",
+                  "value": {
+                    "visible": True,
+                    "required": False,
+                    "type": "number",
+                    "order": 0,
+                    "enquote": False,
+                    "default": 0,
+                    "validator": None
+                  },
+                  "details": {
+                    "label": "NZ",
+                    "description": "Processors in the Z direction",
+                    "argument": None,
+                    "showArgument": False,
+                    "repeatArgument": False
+                  },
+                  "semantics": {
+                    "minCardinality": 0,
+                    "maxCardinality": 1,
+                    "ontology": []
+                  }
                 }
             ],
             "outputs":[  
@@ -1175,12 +1269,25 @@ class Universal:
             ret += [re.sub(r'^(property-|)','property-',k)]
         return ret
 
-    def run_job(self, job_name, input_tgz=None, jtype='fork', run_time = None, sets_props = {}, needs_props = {}):
+    def run_job(self, job_name, input_tgz=None, jtype='fork', nodes=0, ppn=0, run_time=None, sets_props={}, needs_props={}, nx=0, ny=0, nz=0):
         """
         Run a job. It must have a name and an input tarball. It will default
         to running in a queue, but fork can also be requested. Specifying
         the run-time is a good idea, but not required.
         """
+        if ppn == 0:
+            ppn = int(self.fill("{max_procs_per_node}"))
+        if nodes == 0:
+            nodes = ceil(nx*ny*nz/ppn)
+
+        if nx != 0 or ny != 0 or nz != 0:
+            assert nx != 0 and ny != 0 and nz != 0
+            assert nx*ny*nz <= ppn*nodes
+
+        assert ppn <= int(self.fill("{max_procs_per_node}"))
+        assert ppn >= 1
+        assert nodes >= 1
+
         sets_props = self.props(sets_props)
         needs_props = self.props(needs_props)
 
@@ -1224,8 +1331,8 @@ class Universal:
             "appId": "{fork_app_id}",
             "batchQueue": "{queue}",
             "maxRunTime": "{max_run_time}",
-            "nodeCount": 1,
-            "processorsPerNode": int(self.fill("{max_procs_per_node}")),
+            "nodeCount": nodes,
+            "processorsPerNode": ppn,
             "archive": False,
             "archiveSystem": "{storage_id}",
             "inputs": {
@@ -1234,9 +1341,13 @@ class Universal:
             "parameters": {
                 "sets_props":",".join(sets_props),
                 "needs_props":",".join(sets_props),
+                "nx":nx,
+                "ny":ny,
+                "nz":nz
             },
             "notifications": []
         }
+
         if jtype == 'fork':
             job['appId'] = '{fork_app_id}'
         elif jtype == 'queue':
