@@ -19,23 +19,24 @@ def in_notebook():
 
 def visualizeRemoteInTraveler(jobid):
 
+    pre = 'jobdata-'+jobid+'/run_dir'
     try:
-        with open(jobid+'/run_dir/py-csv.txt','r') as fd:
+        with open(pre+'/py-csv.txt','r') as fd:
             csv_data = fd.read()
     
-        with open(jobid+'/run_dir/py-tree.txt','r') as fd:
+        with open(pre+'/py-tree.txt','r') as fd:
             tree_data = fd.read()
     
-        with open(jobid+'/run_dir/py-graph.txt','r') as fd:
+        with open(pre+'/py-graph.txt','r') as fd:
             graph_data = fd.read()
 
-        with open(jobid+'/run_dir/py-src.txt','r') as fd:
+        with open(pre+'/py-src.txt','r') as fd:
             py_src = fd.read()
 
-        with open(jobid+'/run_dir/physl-src.txt','r') as fd:
+        with open(pre+'/physl-src.txt','r') as fd:
             physl_src = fd.read()
 
-        with open(jobid+'/run_dir/label.txt','r') as fd:
+        with open(pre+'/label.txt','r') as fd:
             label = fd.read().strip()
     except:
         print("No performance data to visualize")

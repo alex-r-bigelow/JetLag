@@ -62,7 +62,9 @@ def remote_run(uv, fun, args, queue='fork', lim='00:05:00'):
 export CPUS=$(lscpu | grep "^CPU(s):"|cut -d: -f2)
 export APEX_OTF2=1
 export APEX_PAPI_METRICS="PAPI_TOT_CYC PAPI_BR_MSP PAPI_TOT_INS PAPI_BR_INS PAPI_LD_INS PAPI_SR_INS PAPI_L1_DCM PAPI_L2_DCM"
-singularity exec ~/images/phylanx-devenv.simg python3 command.py
+LD_LIBRARY_PATH="/home/jovyan/install/phylanx/lib64/phylanx:/home/jovyan/install/phylanx/lib64:/usr/local/lib64:/home/jovyan/install/phylanx/lib/phylanx:/usr/lib64/openmpi/lib"
+export PYTHONPATH="/home/jovyan/.local/lib/python3.6/site-packages/phylanx-0.0.1-py3.6-linux-x86_64.egg"
+singularity exec ~/images/phylanx-test.simg python3 command.py
 """,
       "command.py" : """#!/usr/bin/env python3
 from phylanx import Phylanx, PhylanxSession
@@ -78,11 +80,46 @@ def from_string(s):
     return pickle.loads(codecs.decode(s,'base64'))
 
 args = from_string({argsrc})
-print("args:",args)
 
-@Phylanx(performance='x')
+@Phylanx
 {funsrc}
 
+with open("call_{funname}.physl","w") as fw:
+    alist = []
+    aasign = []
+    for i in range(len(args)):
+        argn = "a"+str(i)
+        alist += [argn]
+        aasign += ["define(",argn+","+str(args[i])+")"]
+    from phylanx.ast.physl import print_physl_src
+    import contextlib, io
+    physl_src_raw = {funname}.get_physl_source()
+    f = io.StringIO()
+    with contextlib.redirect_stdout(f):
+        print_physl_src(physl_src_raw)
+    physl_src_pretty = f.getvalue()
+    print(physl_src_raw,file=fw)
+
+    for a in aasign:
+        print(a,file=fw)
+    print("cout({funname}("+(",".join(alist))+"))",file=fw)
+
+from subprocess import Popen, PIPE
+p = Popen([
+        "mpirun",
+        "-np","1",
+        "/home/jovyan/phylanx/build/bin/physl",
+        "--dump-counters=py-csv.txt",
+        "--dump-newick-tree=py-tree.txt",
+        "--dump-dot=py-graph.txt",
+        "--performance",
+        "call_{funname}.physl"
+    ]
+    ,stdout=PIPE,stderr=PIPE,universal_newlines=True)
+out, err = p.communicate()
+
+# This is redundant and shouldn't be needed
+# once physl can write the result to a file.
 result = {funname}(*args)
 
 with open("result.py","w") as fd:
@@ -90,13 +127,9 @@ with open("result.py","w") as fd:
     print("result=%s" % sval,file=fd)
 
 with open("physl-src.txt","w") as fd:
-    print({funname}.__src__,file=fd)
+    print(physl_src_pretty,file=fd)
 
-files = ['py-csv.txt','py-tree.txt','py-graph.txt']
-for i in range(len(files)):
-    with open(files[i],"w") as fd:
-        print({funname}.__perfdata__[i],file=fd)
 """.format(funsrc=src, funname=funname, argsrc=pargs)
     }
-    jobid = uv.run_job('py-fun',input_tgz,queue,lim)
+    jobid = uv.run_job('py-fun',input_tgz,jtype=queue,run_time=lim,nodes=1)
     return RemoteJobWatcher(uv,jobid)
