@@ -81,9 +81,39 @@ def old_pause():
         sleep(sleep_time)
     last_time = time()
 
-last_time_array = []
+time_array = []
+
+def key2(a):
+    return int(1e6*a[1])
 
 def pause():
+    global time_array
+    home = os.environ['HOME']
+    tmp_dir = home+"/tmp/times"
+    if len(time_array) == 0:
+        os.makedirs(tmp_dir, exist_ok=True)
+        time_array = []
+        for i in range(18):
+            tmp_file = tmp_dir+"/t_"+str(i)
+            if not os.path.exists(tmp_file):
+                with open(tmp_file,"w") as fd:
+                    pass
+            tmp_age = os.path.getmtime(tmp_file)
+            time_array += [[tmp_file,tmp_age-60]]
+    time_array = sorted(time_array,key=key2)
+    stime = time_array[0][1]+60
+    now = time()
+    delt = stime - now
+    if delt > 0:
+        print("sleep:",delt)
+        sleep(delt)
+    with open(time_array[0][0],"w") as fd:
+        pass
+    time_array[0][1] = os.path.getmtime(time_array[0][0])
+
+last_time_array = []
+
+def pause1():
     global last_time_array
     now = time()
     last_time_array += [now]
