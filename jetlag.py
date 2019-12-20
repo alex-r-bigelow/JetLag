@@ -232,8 +232,8 @@ class RemoteJobWatcher:
                     if re.match(r'.*(\.(out|err))$',out):
                         self.uv.get_file(self.jobid, out, jobdir+"/"+re.sub(r'.*\.','job.',out))
             if os.path.exists(jobdir+'/run_dir/result.py'):
-              modulename = importlib.machinery.SourceFileLoader('rr',jobdir+'/run_dir/result.py').load_module()
-              self.result = pickle.loads(codecs.decode(modulename.result,'base64'))
+              with open(jobdir+'/run_dir/result.py',"r") as fd:
+                self.result = eval(fd.read().strip())
             else:
               self.result = None
             return self.result

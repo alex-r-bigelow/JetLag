@@ -15,7 +15,7 @@ def fib(n):
     else:
         return fib(n-1)+fib(n-2)
 
-job = remote_run(uv, fib, (12,))
+job = remote_run(uv, fib, (13,), nodes=1, ppn=1)
 job.wait()
 print("result:",job.get_result())
 

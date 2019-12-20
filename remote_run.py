@@ -29,13 +29,7 @@ def mk_label(fname, real_args):
 
 
 def viz(job):
-    #import importlib.machinery
     try:
-      #if os.path.exists('run_dir/result.py'):
-      #  modulename = importlib.machinery.SourceFileLoader('rr','run_dir/result.py').load_module()
-      #  job.result = pickle.loads(codecs.decode(modulename.result,'base64'))
-      #else:
-      #  job.result = None
       with open("run_dir/name.txt","r") as fd:
         fname = fd.read().strip()
       response = visualizeRemoteInTraveler(job.jobid)
@@ -44,7 +38,7 @@ def viz(job):
       import traceback
       traceback.print_exc()
 
-def remote_run(uv, fun, args, queue='fork', lim='00:05:00'):
+def remote_run(uv, fun, args, queue='fork', lim='00:05:00', nodes=0, ppn=0):
     if hasattr(fun, "backend"):
         wfun = fun.backend.wrapped_function
     else:
@@ -59,6 +53,7 @@ def remote_run(uv, fun, args, queue='fork', lim='00:05:00'):
       "label.txt" : label,
       "name.txt" : funname,
       "runapp.sh" : """#!/bin/bash
+source ../.env
 export CPUS=$(lscpu | grep "^CPU(s):"|cut -d: -f2)
 export APEX_OTF2=1
 export APEX_PAPI_METRICS="PAPI_TOT_CYC PAPI_BR_MSP PAPI_TOT_INS PAPI_BR_INS PAPI_LD_INS PAPI_SR_INS PAPI_L1_DCM PAPI_L2_DCM"
@@ -102,34 +97,40 @@ with open("call_{funname}.physl","w") as fw:
 
     for a in aasign:
         print(a,file=fw)
-    print("cout({funname}("+(",".join(alist))+"))",file=fw)
+    print("{funname}("+(",".join(alist))+")",file=fw)
+
+    np = int(os.environ["AGAVE_JOB_PROCESSORS_PER_NODE"])*int(os.environ["AGAVE_JOB_NODE_COUNT"])
+
+    if "PBS_NODEFILE" in os.environ:
+        machf = os.environ["PBS_NODEFILE"]
+    elif "SLURM_JOB_NODELIST" in os.environ:
+        machf = os.environ["SLURM_JOB_NODELIST"]
+    else:
+        machf = "hosts.txt"
+        with open(machf,"w") as fd:
+            for i in range(np):
+                print("localhost",file=fd)
 
 from subprocess import Popen, PIPE
 p = Popen([
         "mpirun",
-        "-np","1",
+        "-np",str(np),
+        "-machinefile",machf,
         "/home/jovyan/phylanx/build/bin/physl",
         "--dump-counters=py-csv.txt",
         "--dump-newick-tree=py-tree.txt",
         "--dump-dot=py-graph.txt",
         "--performance",
+        "--print=result.py",
         "call_{funname}.physl"
     ]
     ,stdout=PIPE,stderr=PIPE,universal_newlines=True)
 out, err = p.communicate()
-
-# This is redundant and shouldn't be needed
-# once physl can write the result to a file.
-result = {funname}(*args)
-
-with open("result.py","w") as fd:
-    sval = to_string(result)
-    print("result=%s" % sval,file=fd)
 
 with open("physl-src.txt","w") as fd:
     print(physl_src_pretty,file=fd)
 
 """.format(funsrc=src, funname=funname, argsrc=pargs)
     }
-    jobid = uv.run_job('py-fun',input_tgz,jtype=queue,run_time=lim,nodes=1)
+    jobid = uv.run_job('py-fun',input_tgz,jtype=queue,run_time=lim,nodes=nodes,ppn=ppn)
     return RemoteJobWatcher(uv,jobid)
