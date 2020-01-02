@@ -32,6 +32,13 @@ from getpass import getpass
 
 os.environ["AGAVE_JSON_PARSER"]="jq"
 
+def decode_bytes(bs):
+    s = ''
+    if type(bs) == bytes:
+        for k in bs:
+            s += chr(k)
+    return s
+
 has_color = False
 if sys.stdout.isatty():
     try:
@@ -1626,10 +1633,10 @@ class Universal:
     def job_list(self, num):
         headers = self.getheaders()
         params = (
-            ('limit','10'),
+            ('limit',num),
         )
         pause()
-        response = requests.get(self.fill("{apiurl}/jobs/v2/"), headers=headers)
+        response = requests.get(self.fill("{apiurl}/jobs/v2/"), headers=headers, params=params)
         check(response)
         jdata = response.json()["result"]
         return jdata
@@ -1762,7 +1769,11 @@ if __name__ == "__main__":
             print(n,": ",sep='',end='')
             pp.pprint(m)
     elif sys.argv[3] == "jobs":
-        for j in uv.job_list(10):
+        if 4 < len(sys.argv):
+            nj = int(sys.argv[4])
+        else:
+            nj = 10
+        for j in uv.job_list(nj):
             pp.pprint(j)
     elif sys.argv[3] == "history":
         jobid = sys.argv[4]
@@ -1777,5 +1788,10 @@ if __name__ == "__main__":
         jobid = uv.hello_world_job()
         jw = RemoteJobWatcher(uv,jobid)
         jw.wait()
+    elif sys.argv[3] == 'get-file':
+        jobid = sys.argv[4]
+        fname = sys.argv[5]
+        c = uv.get_file(jobid, fname)
+        print(decode_bytes(c))
     elif sys.argv[3] == 'ssh-config':
         uv.configure_from_ssh_keys()
