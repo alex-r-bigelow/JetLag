@@ -394,6 +394,7 @@ class Universal:
             self.values[k] = kwargs[k]
         #self.values = self.fill(self.values)
         self.values["sys_pw"] = self.values["backend"]["pass"]
+        self.values["sys_user"] = self.fill(self.values["backend"]["user"])
         self.create_or_refresh_token()
 
         # Check for missing values
@@ -1750,6 +1751,10 @@ if __name__ == "__main__":
         j1.get_result()
     elif sys.argv[3] == "poll":
         uv.poll()
+    elif sys.argv[3] == "del-meta":
+        n = 0
+        d = { "uuid" : sys.argv[4] }
+        uv.del_meta(d)
     elif sys.argv[3] == "meta":
         n = 0
         for m in uv.get_meta(sys.argv[4]):
