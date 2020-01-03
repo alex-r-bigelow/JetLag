@@ -225,6 +225,7 @@ def load_input(pass_var,is_password):
 
     pfname = os.environ["HOME"]+"/."+pass_var
     if os.path.exists(pfname):
+        print("reading %s from %s..." % (pass_var, pfname))
         os.environ[pass_var] = readf(pfname).strip()
         return os.environ[pass_var]
 
@@ -232,6 +233,12 @@ def load_input(pass_var,is_password):
         os.environ[pass_var] = getpass(pass_var+": ").strip()
     else:
         os.environ[pass_var] = input(pass_var+": ").strip()
+
+    if not os.path.exists(pfname):
+        fd = os.open(pfname, os.O_CREAT|os.O_WRONLY|os.O_TRUNC, 0o0600)
+        os.write(fd,os.environ[pass_var].encode('ASCII'))
+        os.close(fd)
+
     return os.environ[pass_var]
 
 class RemoteJobWatcher:
