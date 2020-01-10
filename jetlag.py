@@ -261,6 +261,9 @@ class RemoteJobWatcher:
             if n in job_done:
                 return
 
+    def stop(self):
+        self.uv.job_stop(self.jobid)
+
     def get_result(self):
         if hasattr(self,"result"):
             return self.result
@@ -1630,6 +1633,14 @@ class Universal:
         check(response)
         jdata = response.json()["result"]
         return jdata
+
+    def job_stop(self, jobid):
+        data = { "action": "stop" }
+        headers = self.getheaders()
+        pause()
+        response = requests.post(self.fill("{apiurl}/jobs/v2/")+jobid, headers=headers, data=data)
+        check(response)
+        return response.json()
 
     def job_history(self, jobid):
         headers = self.getheaders()
