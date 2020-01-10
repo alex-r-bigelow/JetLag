@@ -32,6 +32,8 @@ from getpass import getpass
 
 os.environ["AGAVE_JSON_PARSER"]="jq"
 
+job_done = ["FAILED", "FINISHED", "STOPPED", "BLOCKED"]
+
 def decode_bytes(bs):
     s = ''
     if type(bs) == bytes:
@@ -112,7 +114,6 @@ def pause():
     now = time()
     delt = stime - now
     if delt > 0:
-        print("sleep:",delt)
         sleep(delt)
     with open(time_array[0][0],"w") as fd:
         pass
@@ -257,7 +258,7 @@ class RemoteJobWatcher:
                 print(n)
                 s = n
                 sleep(2)
-            if n in ["FINISHED", "BLOCKED", "FAILED"]:
+            if n in job_done:
                 return
 
     def get_result(self):
@@ -287,7 +288,7 @@ class RemoteJobWatcher:
         return self.uv.job_status(self.jobid)
 
     def status(self):
-        if self.last_status in ["FAILED","FINISHED","BLOCKED"]:
+        if self.last_status in job_done:
             return self.last_status
         self.jdata = self.full_status()
         self.last_status = self.jdata["status"]
@@ -742,7 +743,7 @@ class Universal:
                 if "status" not in jentry.keys():
                     continue
 
-                if jentry["status"] not in ["FINISHED", "FAILED", "BLOCKED"]:
+                if jentry["status"] not in job_done:
                     continue
 
                 jobid = jentry["id"]
@@ -1306,7 +1307,7 @@ class Universal:
         """.lstrip()
         }
 
-        return self.run_job('hello-world', input_tgz, jtype, "00:01:00", sets_props, needs_props)
+        return self.run_job('hello-world', input_tgz, jtype=jtype, run_time="00:01:00", sets_props=sets_props, needs_props=needs_props)
 
     def props(self, props):
         ret = []
@@ -1328,6 +1329,9 @@ class Universal:
         if nx != 0 or ny != 0 or nz != 0:
             assert nx != 0 and ny != 0 and nz != 0
             assert nx*ny*nz <= ppn*nodes
+
+        if nodes == 0:
+            nodes = 1
 
         assert ppn <= int(self.fill("{max_procs_per_node}"))
         assert ppn >= 1
@@ -1404,7 +1408,7 @@ class Universal:
         email = self.values["email"]
 
         if email is not None:
-            for event in ["FAILED", "FINISHED"]:
+            for event in job_done:
                 job["notifications"] += [
                     {
                         "url":email,
@@ -1496,7 +1500,7 @@ class Universal:
                     if rc != 0:
                         success = False
                     self.set_meta(data)
-                elif m["status"] in ["FAILED", "BLOCKED"]:
+                elif m["status"] in job_done:
                     done = True
 
                 if done:
@@ -1659,7 +1663,7 @@ class Universal:
             if new_status != last_status:
                 print(jdata["status"])
                 last_status = new_status
-            if new_status  in ["FAILED", "FINISHED", "BLOCKED"]:
+            if new_status  in job_done:
                 break
 
     def get_file(self,jobid,fname,as_file=None):
