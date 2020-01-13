@@ -1635,8 +1635,8 @@ class Universal:
         return jdata
 
     def job_stop(self, jobid):
-        data = { "action": "stop" }
-        headers = self.getheaders()
+        data = json.dumps({ "action": "stop" })
+        headers = self.getheaders(data)
         pause()
         response = requests.post(self.fill("{apiurl}/jobs/v2/")+jobid, headers=headers, data=data)
         check(response)
