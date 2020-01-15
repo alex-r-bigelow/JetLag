@@ -312,7 +312,7 @@ class Universal:
           "backend" : {},
           "email" : 'unknown',
           "sys_user" : 'unknown',
-          "sys_pw" : '?',
+          "sys_pw" : 'unknown',
           "machine_user" : '{machine_user}',
           "machine" : 'unknown',
           "domain" : "unknown",
@@ -329,7 +329,7 @@ class Universal:
           "max_procs_per_node" : -666,
           "min_procs_per_node" : -666,
           "allocation" : "hpc_cmr",
-          "app_name" : "{machine}_queue_{sys_user}",
+          "app_name" : "{machine}_queue_{other}",
           "fork_app_name" : "{machine}_fork_{sys_user}",
           "app_version" : "1.0.0",
           "deployment_path" : "new-{utype}-deployment",
@@ -338,23 +338,38 @@ class Universal:
         }
 
 
-    def load(self,backend,email,machine):
+    def load(self,backend,email,machine=None):
         self.values['backend']=backend
-        self.values['machine']=machine
+        if machine is not None:
+            self.values['machine']=machine
         self.values['email']=email
         self.set_backend()
         self.create_or_refresh_token()
 
-        self.values["storage_id"] = self.fill('{machine}-storage-{sys_user}')
-        self.values["execm_id"] = self.fill('{machine}-exec-{sys_user}')
-        self.values["forkm_id"] = self.fill('{machine}-fork-{sys_user}')
+        if machine is None:
+            return
+
+        rexp = r'^machine-config-(.*)-'+machine+r'$'
+        m = self.get_meta(rexp)
+        if len(m) > 0 and re.match(rexp, m[0]["name"]):
+            g = re.match(rexp, m[0]["name"])
+            self.values["other"] = g.group(1)
+        else:
+            self.valeus["other"] = "{sys_usr}"
+
+        self.values["storage_id"] = self.fill('{machine}-storage-{other}')
+        self.values["execm_id"] = self.fill('{machine}-exec-{other}')
+        self.values["forkm_id"] = self.fill('{machine}-fork-{other}')
         m = self.get_exec()
+        if m is None:
+            return
         mname = m["name"]
         g = re.search(r'\((.*)\)',mname)
         assert g, mname
         self.values["machine_user"] = g.group(1)
         self.mk_extra()
 
+        self.values['sys_pw'] = backend['pass']
         self.values["domain"] = m["site"]
         self.values["queue"] = m["queues"][0]["name"]
         self.values["max_jobs_per_user"] = m["maxSystemJobsPerUser"]
@@ -410,9 +425,10 @@ class Universal:
             assert type(self.values[k]) == type(kwargs[k]),\
                 "The type of arg '%s' should be '%s'" % (k, str(type(self.values[k])))
             self.values[k] = kwargs[k]
-        #self.values = self.fill(self.values)
         self.values["sys_pw"] = self.values["backend"]["pass"]
         self.values["sys_user"] = self.fill(self.values["backend"]["user"])
+        # we are initializing with raw data here...
+        self.values["other"] = self.values["sys_user"]
         self.create_or_refresh_token()
 
         # Check for missing values
@@ -421,17 +437,26 @@ class Universal:
             assert self.values[k] != -666, "Please supply an integer value for '%s'" % k
         self.mk_extra()
 
+        name = "system-config-"+self.values["sys_user"]+"-"+self.values["machine"]
         mm = {
-            "name" : "system-config-"+self.values["sys_user"]+"-"+self.values["machine"],
+            "name" : name,
             "value" : machine_meta
         }
-        self.set_meta(mm)
+        mv = self.get_meta(name)
+        # if len(mv) is zero, that means there's no
+        # configuration with our user id, which means
+        # we didn't create the metadata and we shouldn't
+        # update it.
+        if len(mv) == 0:
+            return
+
+        # Only update the metadata if it's
+        # been modified.
+        if mv[0]["value"] != mm["value"]:
+            self.set_meta(mm)
 
     def mk_extra(self):
         # Create a few extra values
-        self.values["storage_id"] = self.fill('{machine}-storage-{sys_user}')
-        self.values["execm_id"] = self.fill('{machine}-exec-{sys_user}')
-        self.values["forkm_id"] = self.fill('{machine}-fork-{sys_user}')
         if self.values["utype"] == "tapis":
             self.values["job_dir"] = self.fill('{home_dir}/tjob')
         else:
@@ -627,8 +652,8 @@ class Universal:
 
     def get_exec(self):
         headers = self.getheaders()
-        response = requests.get(
-            self.fill('{apiurl}/systems/v2/{execm_id}'), headers=headers)
+        url = self.fill('{apiurl}/systems/v2/{execm_id}')
+        response = requests.get(url, headers=headers)
         if response.status_code == 404:
             return None
         check(response)
@@ -766,13 +791,8 @@ class Universal:
             self.create_token()
 
     def create_token(self):
-        #self.values["sys_user"] = backend['user']
-        #self.values["utype"] = backend['utype']
-        #self.values["tenant"] = backend['tenant']
-        #self.values["sys_pw"] = load_pass(backend['pass'])
-        #self.values["apiurl"] = backend["baseurl"]
 
-        if "sys_pw" not in self.values:
+        if "sys_pw" not in self.values or self.values["sys_pw"] == "unknown":
             self.values["sys_pw"] = self.values["backend"]["pass"]
 
         self.values["sys_user"] = self.fill(self.values["sys_user"])
@@ -1725,7 +1745,10 @@ class Universal:
         else:
             app_name = self.values["app_name"]
         version = self.values["app_version"]
-        response = requests.get(self.fill("{apiurl}/apps/v2/"+app_name+"-"+version+"/pems"), headers=headers)
+        url = self.fill("{apiurl}/apps/v2/"+app_name+"-"+version+"/pems")
+        response = requests.get(url, headers=headers)
+        if response.status_code == 403:
+            print("error for url:",url)
         check(response)
         jdata = response.json()
         return jdata["result"][0]["permission"]
@@ -1767,10 +1790,10 @@ if __name__ == "__main__":
     uv = Universal()
     backend = sys.argv[1]
     system = sys.argv[2]
-    uv.init(
+    uv.load(
         backend=backends[backend],
         email='sbrandt@cct.lsu.edu',
-        **systems[system])
+        machine=system)
     uv.refresh_token()
     if sys.argv[3] == "job-status":
         j1 = RemoteJobWatcher(uv, sys.argv[4])
@@ -1817,3 +1840,5 @@ if __name__ == "__main__":
         print(decode_bytes(c))
     elif sys.argv[3] == 'ssh-config':
         uv.configure_from_ssh_keys()
+    else:
+        raise Exception("Bad arguments")
