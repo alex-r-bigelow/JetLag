@@ -695,7 +695,7 @@ class Universal:
         if not force:
             headers = self.getheaders()
             response = requests.get(
-	            self.fill('{apiurl}/systems/v2/{storage_id}'), headers=headers)
+                self.fill('{apiurl}/systems/v2/{storage_id}'), headers=headers)
             print(self.fill('{apiurl}/systems/v2/{storage_id}'))
             check(response)
             json_data = response.json()
@@ -1098,22 +1098,22 @@ class Universal:
             "modules":[],
             "inputs":[
                 {   
-                	"id":"input tarball",
-                	"details":{  
-                    	"label":"input tarball",
-                    	"description":"",
-                    	"argument":None,
-                    	"showArgument":False
-                	},
-                	"value":{  
-                    	"default":"",
-                    	"order":0,
-                    	"required":False,
-                    	"validator":"",
-                    	"visible":True
-                	}
-            	}   
-        	],
+                    "id":"input tarball",
+                    "details":{  
+                        "label":"input tarball",
+                        "description":"",
+                        "argument":None,
+                        "showArgument":False
+                    },
+                    "value":{  
+                        "default":"",
+                        "order":0,
+                        "required":False,
+                        "validator":"",
+                        "visible":True
+                    }
+                }   
+            ],
             "parameters":[
                 {
                   "id": "simagename",
@@ -1753,6 +1753,53 @@ class Universal:
         jdata = response.json()
         return jdata["result"][0]["permission"]
 
+    def system_role(self, system, user, role):
+        data = json.dumps({"role":role})
+        headers = self.getheaders(data)
+        
+        url = self.fill('{apiurl}/systems/v2/'+system+'/roles/'+user)
+        response = requests.post(url, headers=headers, data=data)
+        check(response)
+
+    def apps_pems(self, app, user, pem):
+        data = json.dumps({'permission': pem})
+        headers = self.getheaders(data)
+
+        url=self.fill('{apiurl}/apps/v2/'+app+'/pems/'+user)
+        response = requests.post(url, headers=headers, data=data)
+        check(response)
+
+    def meta_pems(self, uuid, user, pem):
+        data = json.dumps({ 'permission': pem })
+        headers = self.getheaders(data)
+
+        url=self.fill('{apiurl}/meta/v2/data/'+uuid+'/pems/'+user)
+        response = requests.post(url, headers=headers, data=data)
+        check(response)
+
+    def access(self, user, allow):
+        # Need to grant access to the meta data, the app, the exec machine, and the storage machine
+        if allow:
+            role = 'USER'
+            apps_pems = 'READ_EXECUTE'
+            meta_pems = 'READ'
+        else:
+            role = 'NONE'
+            apps_pems = 'NONE'
+            meta_pems = 'NONE'
+        self.system_role('{execm_id}',user,role)
+        self.system_role('{forkm_id}',user,role)
+        self.system_role('{storage_id}',user,role)
+        self.apps_pems('{app_name}-{app_version}',user,apps_pems)
+        self.apps_pems('{fork_app_name}-{app_version}',user,apps_pems)
+        meta_name = "system-config-"+self.values["sys_user"]+"-"+self.values["machine"]
+        for mm in self.get_meta(meta_name):
+            self.meta_pems(mm['uuid'],user,meta_pems)
+        if allow:
+            print(self.fill("Access to {app_name} granted to user "+user))
+        else:
+            print(self.fill("Access to {app_name} revoked from user "+user))
+
     def show_job(self,jobid,dir='',verbose=True,recurse=True):
         if dir == "" and verbose:
             print(colored("Output for job: "+jobid,"magenta"))
@@ -1840,5 +1887,15 @@ if __name__ == "__main__":
         print(decode_bytes(c))
     elif sys.argv[3] == 'ssh-config':
         uv.configure_from_ssh_keys()
+    elif sys.argv[3] == 'access':
+        user = sys.argv[4]
+        if sys.argv[5] == "True":
+            tf = True
+        elif sys.argv[5] == "False":
+            tf = False
+        else:
+            assert False, "arg 5 should be True/False"
+        print("Access:",user,tf)
+        uv.access(user,tf)
     else:
-        raise Exception("Bad arguments")
+        raise Exception(sys.argv[3])
