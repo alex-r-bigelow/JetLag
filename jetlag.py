@@ -330,7 +330,7 @@ class Universal:
           "min_procs_per_node" : -666,
           "allocation" : "hpc_cmr",
           "app_name" : "{machine}_queue_{other}",
-          "fork_app_name" : "{machine}_fork_{sys_user}",
+          "fork_app_name" : "{machine}_fork_{other}",
           "app_version" : "1.0.0",
           "deployment_path" : "new-{utype}-deployment",
           "scheduler" : "unknown",
@@ -654,6 +654,8 @@ class Universal:
         headers = self.getheaders()
         url = self.fill('{apiurl}/systems/v2/{execm_id}')
         response = requests.get(url, headers=headers)
+        if response.status_code == 403:
+            print(url)
         if response.status_code == 404:
             return None
         check(response)
