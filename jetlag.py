@@ -355,7 +355,7 @@ class Universal:
             g = re.match(rexp, m[0]["name"])
             self.values["other"] = g.group(1)
         else:
-            self.valeus["other"] = "{sys_usr}"
+            self.values["other"] = "{sys_usr}"
 
         self.values["storage_id"] = self.fill('{machine}-storage-{other}')
         self.values["execm_id"] = self.fill('{machine}-exec-{other}')
@@ -435,6 +435,9 @@ class Universal:
         for k in self.values:
             assert self.values[k] != "unknown", "Please supply a string value for '%s'" % k
             assert self.values[k] != -666, "Please supply an integer value for '%s'" % k
+        self.values["storage_id"] = self.fill('{machine}-storage-{other}')
+        self.values["execm_id"] = self.fill('{machine}-exec-{other}')
+        self.values["forkm_id"] = self.fill('{machine}-fork-{other}')
         self.mk_extra()
 
         name = "system-config-"+self.values["sys_user"]+"-"+self.values["machine"]
