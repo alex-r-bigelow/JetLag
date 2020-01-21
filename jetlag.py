@@ -92,6 +92,9 @@ def old_pause():
 
 time_array = []
 
+pause_files = 9
+pause_time = 30
+
 def key2(a):
     return int(1e6*a[1])
 
@@ -108,9 +111,9 @@ def pause():
                 with open(tmp_file,"w") as fd:
                     pass
             tmp_age = os.path.getmtime(tmp_file)
-            time_array += [[tmp_file,tmp_age-60]]
+            time_array += [[tmp_file,tmp_age-pause_time]]
     time_array = sorted(time_array,key=key2)
-    stime = time_array[0][1]+60
+    stime = time_array[0][1]+pause_time
     now = time()
     delt = stime - now
     if delt > 0:
@@ -351,11 +354,9 @@ class Universal:
 
         rexp = r'^machine-config-(.*)-'+machine+r'$'
         m = self.get_meta(rexp)
-        if len(m) > 0 and re.match(rexp, m[0]["name"]):
-            g = re.match(rexp, m[0]["name"])
-            self.values["other"] = g.group(1)
-        else:
-            self.values["other"] = "{sys_usr}"
+        assert len(m) > 0, "Could not locate machine '"+machine+"'"
+        g = re.match(rexp, m[0]["name"])
+        self.values["other"] = g.group(1)
 
         self.values["storage_id"] = self.fill('{machine}-storage-{other}')
         self.values["execm_id"] = self.fill('{machine}-exec-{other}')
@@ -440,7 +441,7 @@ class Universal:
         self.values["forkm_id"] = self.fill('{machine}-fork-{other}')
         self.mk_extra()
 
-        name = "system-config-"+self.values["sys_user"]+"-"+self.values["machine"]
+        name = "machine-config-"+self.values["sys_user"]+"-"+self.values["machine"]
         mm = {
             "name" : name,
             "value" : machine_meta
@@ -455,6 +456,7 @@ class Universal:
 
         # Only update the metadata if it's
         # been modified.
+        print("mm:",mm)
         if mv[0]["value"] != mm["value"]:
             self.set_meta(mm)
 
@@ -1361,7 +1363,8 @@ class Universal:
         if nodes == 0:
             nodes = 1
 
-        assert ppn <= int(self.fill("{max_procs_per_node}"))
+        max_ppn = int(self.fill("{max_procs_per_node}"))
+        assert ppn <= max_ppn, '%d <= %d' % (ppn, max_ppn)
         assert ppn >= 1
         assert nodes >= 1
 
@@ -1797,7 +1800,7 @@ class Universal:
         self.system_role('{storage_id}',user,role)
         self.apps_pems('{app_name}-{app_version}',user,apps_pems)
         self.apps_pems('{fork_app_name}-{app_version}',user,apps_pems)
-        meta_name = "system-config-"+self.values["sys_user"]+"-"+self.values["machine"]
+        meta_name = "machine-config-"+self.values["sys_user"]+"-"+self.values["machine"]
         for mm in self.get_meta(meta_name):
             self.meta_pems(mm['uuid'],user,meta_pems)
         if allow:
