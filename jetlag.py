@@ -441,31 +441,25 @@ class Universal:
         self.values["forkm_id"] = self.fill('{machine}-fork-{other}')
         self.mk_extra()
 
-        name = "machine-config-"+self.values["sys_user"]+"-"+self.values["machine"]
+        name = "machine-config-"+self.values["other"]+"-"+self.values["machine"]
         mm = {
             "name" : name,
             "value" : machine_meta
         }
         mv = self.get_meta(name)
-        # if len(mv) is zero, that means there's no
-        # configuration with our user id, which means
-        # we didn't create the metadata and we shouldn't
-        # update it.
+
+        # Make sure there's some data there
         if len(mv) == 0:
-            return
+            mv = [{"value":""}]
 
         # Only update the metadata if it's
         # been modified.
-        print("mm:",mm)
         if mv[0]["value"] != mm["value"]:
             self.set_meta(mm)
 
     def mk_extra(self):
         # Create a few extra values
-        if self.values["utype"] == "tapis":
-            self.values["job_dir"] = self.fill('{home_dir}/tjob')
-        else:
-            self.values["job_dir"] = self.fill('ajob')
+        self.jobs_dir()
 
         self.values['app_id'] = self.fill("{app_name}-{app_version}")
         self.values['fork_app_id'] = self.fill("{fork_app_name}-{app_version}")
@@ -514,10 +508,11 @@ class Universal:
         self.values["apiurl"] = backend["baseurl"]
 
     def get_auth_file(self):
+        user = self.fill("{sys_user}")
         if self.values['utype'] == 'tapis':
-            auth_file = os.environ["HOME"]+"/.agave/current"
+            auth_file = os.environ["HOME"]+"/.tapis/"+user+"/current"
         else:
-            auth_file = os.environ["HOME"]+"/.agave1/current"
+            auth_file = os.environ["HOME"]+"/.agave/"+user+"/current"
         return auth_file
 
     def getauth(self):
@@ -754,9 +749,9 @@ class Universal:
         the job if possible.
         """
         if self.is_tapis():
-            fdata = self.files_list("tjob")
+            fdata = self.files_list(self.jobs_dir())
         else:
-            fdata = self.files_list("ajob")
+            fdata = self.files_list(self.jobs_dir())
         for f in fdata:
             if f["format"] == "folder":
                 job_name = f["name"]
@@ -784,6 +779,7 @@ class Universal:
                 jobid = jentry["id"]
 
                 headers = self.getheaders()
+                pause()
                 pause()
                 print("Deleting job data for:",job_name,jobid)
                 response = requests.delete(
@@ -1038,7 +1034,6 @@ class Universal:
         """
         dir_name = self.fill(dir_name)
         file_name = self.fill(file_name)
-        #print("uploading:",file_name,"to",dir_name)
         file_contents = self.fill(file_contents)
         if file_contents is None:
             with open(file_name, "rb") as fd:
@@ -1051,6 +1046,7 @@ class Universal:
             url = self.fill('{apiurl}/files/v2/media/system/{storage_id}//{home_dir}/'+dir_name)
         else:
             url = self.fill('{apiurl}/files/v2/media/system/{storage_id}/'+dir_name)
+        pause()
         pause()
         response = requests.post(url, headers=headers, files=files)
         check(response)
@@ -1296,9 +1292,9 @@ class Universal:
 
         self.make_dir('{deployment_path}')
         if self.is_tapis():
-            self.make_dir('tjob')
+            self.make_dir(self.jobs_dir())
         else:
-            self.make_dir('ajob')
+            self.make_dir(self.jobs_dir())
         data = self.fill(json.dumps({"action": "mkdir", "path": "{home_dir}/{deployment_path}"}))
         headers = self.getheaders(data)
         pause()
@@ -1397,12 +1393,9 @@ class Universal:
             self.set_meta({"name":k,"value":job_name})
 
         url = self.fill("agave://{storage_id}/{job_dir}/"+job_name+"/")
-        if self.is_tapis():
-            self.make_dir('tjob')
-            job_dir = 'tjob/'+job_name+'/'
-        else:
-            self.make_dir('ajob')
-            job_dir = 'ajob/'+job_name+'/'
+        jobs_dir = self.jobs_dir()
+        self.make_dir(jobs_dir)
+        job_dir = jobs_dir+'/'+job_name+'/'
         self.make_dir(job_dir)
         self.file_upload(job_dir,"input.tgz")
 
@@ -1511,7 +1504,6 @@ class Universal:
             if "jobid" in m:
                 done = False
                 success = True
-                #m["status"] = self.job_status(m["jobid"])["status"]
                 jstat = self.job_status(m["jobid"])
                 if jstat is not None:
                     m["status"] = jstat["status"]
@@ -1551,7 +1543,7 @@ class Universal:
                     #print("Cleaning up...",data["value"]["jobid"])
                     headers = self.getheaders()
                     pause()
-                    jdata = self.job_status(m["jobid"]) # yyy
+                    jdata = self.job_status(m["jobid"])
                     fname = jdata['inputs']['input tarball']
                     if self.is_tapis():
                         assert type(fname) == str, fname
@@ -1563,12 +1555,18 @@ class Universal:
                     jmach = jg.group(1)
                     jdir = jg.group(2)
                     jloc = jmach+'/'+jdir
-                    print("Cleanup:",jloc,"...",end='')
+                    print("Cleanup: ",jloc,"...",end='',flush=True,sep='')
                     pause()
-                    response = requests.delete(self.fill('{apiurl}/files/v2/media/system/')+jloc, headers=headers)
-                    #check(response)
-                    self.del_meta(data)
-                    print("  ...done")
+                    try:
+                        response = requests.delete(self.fill('{apiurl}/files/v2/media/system/')+jloc, headers=headers)
+                        if response.status_code == 404:
+                            print("already missing...",end='',flush=True)
+                        else:
+                            check(response)
+                        self.del_meta(data)
+                        print("done")
+                    except requests.exceptions.ConnectionError as ce:
+                        print("...timed out")
 
             elif "job" in m:
                 ready = True
@@ -1807,6 +1805,14 @@ class Universal:
             print(self.fill("Access to {app_name} granted to user "+user))
         else:
             print(self.fill("Access to {app_name} revoked from user "+user))
+
+    def jobs_dir(self):
+        if self.values["utype"] == "tapis":
+            job_dir = self.fill('tjob/{sys_user}')
+        else:
+            job_dir = self.fill('ajob/{sys_user}')
+        self.values["job_dir"] = job_dir
+        return job_dir
 
     def show_job(self,jobid,dir='',verbose=True,recurse=True):
         if dir == "" and verbose:
