@@ -1911,5 +1911,7 @@ if __name__ == "__main__":
             assert False, "arg 5 should be True/False"
         print("Access:",user,tf)
         uv.access(user,tf)
+    elif sys.argv[3] == 'mkdir':
+        uv.make_dir(sys.argv[4])
     else:
         raise Exception(sys.argv[3])
