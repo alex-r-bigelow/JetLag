@@ -1564,7 +1564,7 @@ class Universal:
                         response = requests.delete(self.fill('{apiurl}/files/v2/media/system/')+jloc, headers=headers)
                         if response.status_code == 404:
                             print("already missing...",end='',flush=True)
-                        elif response.status_code in success_code:
+                        elif response.status_code in success_codes:
                             print("done")
                             self.del_meta(data)
                         else:
