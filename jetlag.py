@@ -1568,7 +1568,7 @@ class Universal:
                             print("done")
                             self.del_meta(data)
                         else:
-                            print("failed (status_code=%d)" % response.status_code
+                            print("failed (status_code=%d)" % response.status_code)
                     except requests.exceptions.ConnectionError as ce:
                         print("...timed out")
 
