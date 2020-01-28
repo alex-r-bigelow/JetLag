@@ -13,12 +13,15 @@
 #
 #####
 
-import requests
+import os
+if "JETLAG_DEBUG" in os.environ:
+    import diagrequests as requests
+else:
+    import requests
 import pprint
 from math import log, ceil
 from subprocess import Popen, PIPE
 import sys
-import os
 import re
 import json
 from time import sleep, time
@@ -312,6 +315,7 @@ class Universal:
         # Values of "uknown" or -666 mean the
         # user must supply a value.
         self.values = {
+          "jetlag_id" : "unknown",
           "backend" : {},
           "email" : 'unknown',
           "sys_user" : 'unknown',
@@ -332,8 +336,8 @@ class Universal:
           "max_procs_per_node" : -666,
           "min_procs_per_node" : -666,
           "allocation" : "hpc_cmr",
-          "app_name" : "{machine}_queue_{other}",
-          "fork_app_name" : "{machine}_fork_{other}",
+          "app_name" : "{jetlag_id}_queue_{other}",
+          "fork_app_name" : "{jetlag_id}_fork_{other}",
           "app_version" : "1.0.0",
           "deployment_path" : "new-{utype}-deployment",
           "scheduler" : "unknown",
@@ -341,26 +345,27 @@ class Universal:
         }
 
 
-    def load(self,backend,email,machine=None):
+    def load(self,backend,email,jetlag_id=None):
         self.values['backend']=backend
-        if machine is not None:
-            self.values['machine']=machine
+        if jetlag_id is not None:
+            self.values['jetlag_id']=jetlag_id
         self.values['email']=email
         self.set_backend()
         self.create_or_refresh_token()
 
-        if machine is None:
+        if jetlag_id is None:
             return
 
-        rexp = r'^machine-config-(.*)-'+machine+r'$'
+        rexp = r'^machine-config-(.*)-'+jetlag_id+r'$'
         m = self.get_meta(rexp)
-        assert len(m) > 0, "Could not locate machine '"+machine+"'"
+        assert len(m) > 0, "Could not locate machine '"+jetlag_id+"'"+' '+rexp
         g = re.match(rexp, m[0]["name"])
         self.values["other"] = g.group(1)
 
-        self.values["storage_id"] = self.fill('{machine}-storage-{other}')
-        self.values["execm_id"] = self.fill('{machine}-exec-{other}')
-        self.values["forkm_id"] = self.fill('{machine}-fork-{other}')
+        self.values["storage_id"] = self.fill('{jetlag_id}-storage-{other}')
+        self.values["execm_id"] = self.fill('{jetlag_id}-exec-{other}')
+        self.values["forkm_id"] = self.fill('{jetlag_id}-fork-{other}')
+        self.values["machine"] = self.fill(m[0]["value"]["machine"])
         m = self.get_exec()
         if m is None:
             return
@@ -436,12 +441,12 @@ class Universal:
         for k in self.values:
             assert self.values[k] != "unknown", "Please supply a string value for '%s'" % k
             assert self.values[k] != -666, "Please supply an integer value for '%s'" % k
-        self.values["storage_id"] = self.fill('{machine}-storage-{other}')
-        self.values["execm_id"] = self.fill('{machine}-exec-{other}')
-        self.values["forkm_id"] = self.fill('{machine}-fork-{other}')
+        self.values["storage_id"] = self.fill('{jetlag_id}-storage-{other}')
+        self.values["execm_id"] = self.fill('{jetlag_id}-exec-{other}')
+        self.values["forkm_id"] = self.fill('{jetlag_id}-fork-{other}')
         self.mk_extra()
 
-        name = "machine-config-"+self.values["other"]+"-"+self.values["machine"]
+        name = "machine-config-"+self.values["other"]+"-"+self.values["jetlag_id"]
         mm = {
             "name" : name,
             "value" : machine_meta
@@ -610,8 +615,6 @@ class Universal:
         Completely configure the univeral system
         starting from a password.
         """
-        #if self.pw_auth["password"] == "":
-        #    self.pw_auth["password"] = load_pass(self.values["machine"].upper()+"_PASSWORD")
         self.set_auth_type("PASSWORD")
         self.mk_storage(force=True)
         self.install_key()
@@ -1474,7 +1477,7 @@ class Universal:
                 "jobid":jobid,
                 "needs_props":list(needs_props),
                 "sets_props":list(sets_props),
-                "machine":self.values["machine"]
+                "jetlag_id":self.values["jetlag_id"]
             }
             meta = {
                 "name":"jobdata-"+job_name,
@@ -1487,7 +1490,7 @@ class Universal:
                 "job": job,
                 "needs_props":list(needs_props),
                 "sets_props":list(sets_props),
-                "machine":self.values["machine"]
+                "jetlag_id":self.values["jetlag_id"]
             }
             meta = {
                 "name":"jobdata-"+job_name,
@@ -1561,10 +1564,11 @@ class Universal:
                         response = requests.delete(self.fill('{apiurl}/files/v2/media/system/')+jloc, headers=headers)
                         if response.status_code == 404:
                             print("already missing...",end='',flush=True)
+                        elif response.status_code in success_code:
+                            print("done")
+                            self.del_meta(data)
                         else:
-                            check(response)
-                        self.del_meta(data)
-                        print("done")
+                            print("failed (status_code=%d)" % response.status_code
                     except requests.exceptions.ConnectionError as ce:
                         print("...timed out")
 
@@ -1798,7 +1802,7 @@ class Universal:
         self.system_role('{storage_id}',user,role)
         self.apps_pems('{app_name}-{app_version}',user,apps_pems)
         self.apps_pems('{fork_app_name}-{app_version}',user,apps_pems)
-        meta_name = "machine-config-"+self.values["sys_user"]+"-"+self.values["machine"]
+        meta_name = self.fill("machine-config-"+self.values["sys_user"]+"-"+self.values["jetlag_id"])
         for mm in self.get_meta(meta_name):
             self.meta_pems(mm['uuid'],user,meta_pems)
         if allow:
@@ -1854,7 +1858,7 @@ if __name__ == "__main__":
     uv.load(
         backend=backends[backend],
         email='sbrandt@cct.lsu.edu',
-        machine=system)
+        jetlag_id=system)
     uv.refresh_token()
     if sys.argv[3] == "job-status":
         j1 = RemoteJobWatcher(uv, sys.argv[4])

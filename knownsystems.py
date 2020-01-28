@@ -6,6 +6,14 @@ backend_agave = {
   "pass" : "{AGAVE_PASSWORD}",
 }
 
+backend_agave2 = {
+  "baseurl" : "https://sandbox.agaveplatform.org",
+  "tenant" : "sandbox",
+  "user" : "{AGAVE2_USER}",
+  "utype" : "agave",
+  "pass" : "{AGAVE2_PASSWORD}",
+}
+
 backend_tapis = {
   "baseurl" : "https://api.tacc.utexas.edu",
   "tenant" : "tacc.prod",
@@ -16,11 +24,13 @@ backend_tapis = {
 
 backends = {
     "tapis" : backend_tapis,
-    "agave" : backend_agave
+    "agave" : backend_agave,
+    "agave2" : backend_agave2
 }
 
 shelob = {
-  "machine_user" : '{SHELOB_USER}',
+  "jetlag_id" : "shelob-funwave",
+  "machine_user" : "funwave",
   "machine" : 'shelob',
   "domain" : "hpc.lsu.edu",
   "queue" : "checkpt",
@@ -41,8 +51,15 @@ shelob = {
 """
 }
 
+shelob2 = {}
+for k in shelob:
+    shelob2[k] = shelob[k]
+shelob2["jetlag_id"] = "shelob-sbrandt"
+shelob2["machine_user"] = "sbrandt"
+
 rostam = {
-  "machine_user" : '{ROSTAM_USER}',
+  "jetlag_id" : "rostam-sbrandt",
+  "machine_user" : "sbrandt",
   "machine" : 'rostam',
   "domain" : "cct.lsu.edu",
   "port" : 8000,

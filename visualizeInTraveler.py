@@ -2,13 +2,18 @@ import inspect
 from datetime import datetime
 from urllib.parse import quote_plus
 import requests
+import os
 try:
     from IPython.core.display import display, HTML
 except:
     pass
 from random import random
 
-base_url = "http://localhost:8100"
+if "TRAVELER_PORT" in os.environ:
+    traveler_port = int(os.environ["TRAVELER_PORT"])
+else:
+    traveler_port = 8000
+base_url = "http://localhost:%d" % traveler_port
 
 def in_notebook():
     try:
@@ -40,8 +45,8 @@ def visualizeRemoteInTraveler(jobid):
             label = fd.read().strip()
     except:
         print("No performance data to visualize")
-        import traceback
-        traceback.print_exc()
+        #import traceback
+        #traceback.print_exc()
         return
 
     label += "@"+jobid

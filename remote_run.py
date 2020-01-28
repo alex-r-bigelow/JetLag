@@ -59,7 +59,7 @@ export APEX_OTF2=1
 export APEX_PAPI_METRICS="PAPI_TOT_CYC PAPI_BR_MSP PAPI_TOT_INS PAPI_BR_INS PAPI_LD_INS PAPI_SR_INS PAPI_L1_DCM PAPI_L2_DCM"
 LD_LIBRARY_PATH="/home/jovyan/install/phylanx/lib64/phylanx:/home/jovyan/install/phylanx/lib64:/usr/local/lib64:/home/jovyan/install/phylanx/lib/phylanx:/usr/lib64/openmpi/lib"
 export PYTHONPATH="/home/jovyan/.local/lib/python3.6/site-packages/phylanx-0.0.1-py3.6-linux-x86_64.egg"
-singularity exec ~sbrandt/images/phylanx-test.simg python3 command.py
+singularity exec $JETLAG_IMAGE python3 command.py
 """,
       "command.py" : """#!/usr/bin/env python3
 from phylanx import Phylanx, PhylanxSession
