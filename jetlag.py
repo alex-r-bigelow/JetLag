@@ -1770,6 +1770,7 @@ class Universal:
         url = self.fill('{apiurl}/systems/v2/'+system+'/roles/'+user)
         response = requests.post(url, headers=headers, data=data)
         check(response)
+        self.show(response)
 
     def apps_pems(self, app, user, pem):
         data = json.dumps({'permission': pem})
@@ -1778,6 +1779,7 @@ class Universal:
         url=self.fill('{apiurl}/apps/v2/'+app+'/pems/'+user)
         response = requests.post(url, headers=headers, data=data)
         check(response)
+        self.show(response)
 
     def meta_pems(self, uuid, user, pem):
         data = json.dumps({ 'permission': pem })
@@ -1786,12 +1788,19 @@ class Universal:
         url=self.fill('{apiurl}/meta/v2/data/'+uuid+'/pems/'+user)
         response = requests.post(url, headers=headers, data=data)
         check(response)
+        self.show(response)
+
+    def show(self,r):
+        try:
+            print(r.json())
+        except:
+            pass
 
     def access(self, user, allow):
         # Need to grant access to the meta data, the app, the exec machine, and the storage machine
         if allow:
             role = 'USER'
-            apps_pems = 'READ_EXECUTE'
+            apps_pems = 'ALL' #'READ_WRITE'
             meta_pems = 'READ'
         else:
             role = 'NONE'
@@ -1860,9 +1869,12 @@ if __name__ == "__main__":
         email='sbrandt@cct.lsu.edu',
         jetlag_id=system)
     uv.refresh_token()
-    if sys.argv[3] == "job-status":
+    if sys.argv[3] in ["job-status","status"]:
         j1 = RemoteJobWatcher(uv, sys.argv[4])
         pp.pprint(j1.full_status())
+    elif sys.argv[3] in ["last-job-status","last-status"]:
+        j1 = RemoteJobWatcher(uv, sys.argv[4])
+        pp.pprint(j1.full_status()["lastStatusMessage"])
     elif sys.argv[3] == "get-result":
         j1 = RemoteJobWatcher(uv, sys.argv[4])
         j1.get_result()

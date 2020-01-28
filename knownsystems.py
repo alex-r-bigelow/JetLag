@@ -22,6 +22,14 @@ backend_tapis = {
   "pass" : "{TAPIS_PASSWORD}",
 }
 
+backend_tapis2 = {
+  "baseurl" : "https://api.tacc.utexas.edu",
+  "tenant" : "tacc.prod",
+  "user" : "{TAPIS2_USER}",
+  "utype" : "tapis",
+  "pass" : "{TAPIS2_PASSWORD}",
+}
+
 backends = {
     "tapis" : backend_tapis,
     "agave" : backend_agave,
