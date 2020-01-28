@@ -353,7 +353,7 @@ class Universal:
         self.set_backend()
         self.create_or_refresh_token()
 
-        if jetlag_id is None:
+        if jetlag_id is None or jetlag_id.strip().lower() == "none":
             return
 
         rexp = r'^machine-config-(.*)-'+jetlag_id+r'$'
