@@ -1799,8 +1799,8 @@ class Universal:
     def access(self, user, allow):
         # Need to grant access to the meta data, the app, the exec machine, and the storage machine
         if allow:
-            role = 'USER'
-            apps_pems = 'ALL' #'READ_WRITE'
+            role = 'OWNER'
+            apps_pems = 'READ_EXECUTE'
             meta_pems = 'READ'
         else:
             role = 'NONE'
