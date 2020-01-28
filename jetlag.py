@@ -1562,10 +1562,11 @@ class Universal:
                     pause()
                     try:
                         response = requests.delete(self.fill('{apiurl}/files/v2/media/system/')+jloc, headers=headers)
-                        if response.status_code == 404:
-                            print("already missing...",end='',flush=True)
-                        elif response.status_code in success_codes:
+                        if response.status_code in success_codes:
                             print("done")
+                            self.del_meta(data)
+                        elif response.status_code in [404, 500]:
+                            print("file gone (status_code=%d)" % response.status_code)
                             self.del_meta(data)
                         else:
                             print("failed (status_code=%d)" % response.status_code)
