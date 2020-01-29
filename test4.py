@@ -9,7 +9,7 @@ import html
 uv = Universal()
 uv.init(
   backend = backend_tapis,
-  email = 'sbrandt@cct.lsu.edu',
+  notify = 'sbrandt@cct.lsu.edu',
   **shelob
 )
 uv.configure_from_ssh_keys()

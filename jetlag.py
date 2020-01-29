@@ -317,7 +317,7 @@ class Universal:
         self.values = {
           "jetlag_id" : "unknown",
           "backend" : {},
-          "email" : 'unknown',
+          "notify" : 'unknown',
           "sys_user" : 'unknown',
           "sys_pw" : 'unknown',
           "machine_user" : '{machine_user}',
@@ -345,11 +345,11 @@ class Universal:
         }
 
 
-    def load(self,backend,email,jetlag_id=None):
+    def load(self,backend,notify=None,jetlag_id=None):
         self.values['backend']=backend
         if jetlag_id is not None:
             self.values['jetlag_id']=jetlag_id
-        self.values['email']=email
+        self.values['notify']=notify
         self.set_backend()
         self.create_or_refresh_token()
 
@@ -418,7 +418,7 @@ class Universal:
 
         machine_meta = {}
         for k in kwargs:
-            if k not in ["email", "backend"]:
+            if k not in ["notify", "backend"]:
                 machine_meta[k] = kwargs[k]
 
         self.set_backend()
@@ -1432,13 +1432,13 @@ class Universal:
             raise Exception("jtype="+jtype)
         job = self.fill(job)
         
-        email = self.values["email"]
+        notify = self.values["notify"]
 
-        if email is not None:
+        if notify is not None:
             for event in job_done:
                 job["notifications"] += [
                     {
-                        "url":email,
+                        "url":notify,
                         "event":event,
                         "persistent": True,
                         "policy": {
@@ -1875,7 +1875,7 @@ if __name__ == "__main__":
     system = sys.argv[2]
     uv.load(
         backend=backends[backend],
-        email='sbrandt@cct.lsu.edu',
+        notify='sbrandt@cct.lsu.edu',
         jetlag_id=system)
     uv.refresh_token()
     if sys.argv[3] in ["job-status","status"]:
