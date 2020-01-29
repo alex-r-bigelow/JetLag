@@ -1828,6 +1828,14 @@ class Universal:
         self.values["job_dir"] = job_dir
         return job_dir
 
+    def systems(self):
+        s = set()
+        for m in self.get_meta('machine-config-.*'):
+            val = m['value']
+            if 'jetlag_id' in val:
+                s.add(val['jetlag_id'])
+        return list(s)
+
     def show_job(self,jobid,dir='',verbose=True,recurse=True):
         if dir == "" and verbose:
             print(colored("Output for job: "+jobid,"magenta"))
@@ -1928,6 +1936,9 @@ if __name__ == "__main__":
             assert False, "arg 5 should be True/False"
         print("Access:",user,tf)
         uv.access(user,tf)
+    elif sys.argv[3] == 'systems':
+        for sys in uv.systems():
+            print(sys)
     elif sys.argv[3] == 'mkdir':
         uv.make_dir(sys.argv[4])
     else:

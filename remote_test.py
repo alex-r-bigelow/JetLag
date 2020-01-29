@@ -10,6 +10,11 @@ uv.load(
     jetlag_id='rostam-sbrandt',
 )
 
+print("The complete list of valid jetlag_id's that can be used for this test:")
+for sys in uv.systems():
+    print(sys)
+print()
+
 def fib(n):
     if n < 2:
         return n

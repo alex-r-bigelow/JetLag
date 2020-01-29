@@ -34,9 +34,10 @@ def viz(job):
         fname = fd.read().strip()
       response = visualizeRemoteInTraveler(job.jobid)
     except Exception as e:
+      print("Could not visualize result, Traveler missing/unavailable:")
       print("exception:",e)
-      import traceback
-      traceback.print_exc()
+      #import traceback
+      #traceback.print_exc()
 
 def remote_run(uv, fun, args, queue='fork', lim='00:05:00', nodes=0, ppn=0):
     if hasattr(fun, "backend"):
