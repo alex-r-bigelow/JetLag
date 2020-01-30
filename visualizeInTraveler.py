@@ -2,6 +2,7 @@ import inspect
 from datetime import datetime
 from urllib.parse import quote_plus
 import requests
+import subprocess
 import os
 try:
     from IPython.core.display import display, HTML
@@ -23,45 +24,57 @@ def in_notebook():
         return False
 
 def visualizeRemoteInTraveler(jobid):
-
     pre = 'jobdata-'+jobid+'/run_dir'
-    try:
-        with open(pre+'/py-csv.txt','r') as fd:
-            csv_data = fd.read()
-    
-        with open(pre+'/py-tree.txt','r') as fd:
-            tree_data = fd.read()
-    
-        with open(pre+'/py-graph.txt','r') as fd:
-            graph_data = fd.read()
 
-        with open(pre+'/py-src.txt','r') as fd:
-            py_src = fd.read()
-
-        with open(pre+'/physl-src.txt','r') as fd:
-            physl_src = fd.read()
-
-        with open(pre+'/label.txt','r') as fd:
-            label = fd.read().strip()
-    except:
-        print("No performance data to visualize")
-        #import traceback
-        #traceback.print_exc()
-        return
-
+    # The only requirement is a label
+    if not os.path.exists(pre+'/label.txt'):
+        raise Exception("No label provided; can't visualize performance data")
+    with open(pre+'/label.txt', 'r') as fd:
+        label = fd.read().strip()
     label += "@"+jobid
 
-    url = base_url + '/datasets/%s' % quote_plus(label)
+    # Read any small text files that exist
+    argMap = {
+        'csv': pre+'/py-csv.txt',
+        'newick': pre+'/py-tree.txt',
+        'dot': pre+'/py-graph.txt',
+        'physl': pre+'/physl-src.txt',
+        'python': pre+'/py-src.txt'
+    }
+    postData = {}
+    for arg, path in argMap.items():
+        if os.path.exists(path):
+            with open(path, 'r') as fd:
+                postData[arg] = fd.read()
 
-    response = requests.post(url, stream=True, json={
-        'csv': csv_data,
-        'newick': tree_data,
-        'dot': graph_data,
-        'physl': physl_src,
-        'python': py_src
-    })
+    # Create the dataset in traveler
+    url = base_url + '/datasets/%s' % quote_plus(label)
+    mainResponse = requests.post(url, json=postData)
+
+    otf2Path = pre+'/OTF2_archive/APEX.otf2'
+    if os.path.exists(otf2Path):
+        # Upload the OTF2 trace separately because we want to stream its
+        # contents instead of trying to load the whole thing into memory
+        def iterOtf2():
+            otfPipe = subprocess.Popen(['otf2-print', otf2Path], stdout=subprocess.PIPE)
+            for line in otfPipe.stdout:
+                yield line
+        otf2Response = requests.post(
+            url + '/otf2',
+            stream=True,
+            data=iterOtf2(),
+            headers={'content-type': 'text/text'}
+        )
     if in_notebook():
         display(HTML("<a target='the-viz' href='"+base_url+"/static/interface.html?x=%f'>%s</a>" % (random(), label)))
     else:
-        print("URL:",base_url+"/static/interface.html")
-    return response
+        print("URL:", base_url+"/static/interface.html")
+    return (mainResponse, otf2Response)
+
+if __name__ == "__main__":
+    import sys
+    (m, o) = visualizeRemoteInTraveler(sys.argv[1])
+    for chunk in m.iter_content():
+        print(chunk.decode(), end='')
+    for chunk in o.iter_content():
+        print(chunk.decode(), end='')
