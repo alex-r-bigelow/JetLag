@@ -65,3 +65,28 @@ def visualizeRemoteInTraveler(jobid):
     else:
         print("URL:",base_url+"/static/interface.html")
     return response
+
+def visualize(f,label=None):
+    if label is None:
+        label = f.backend.wrapped_function.__name__
+    pid = str(os.getpid())
+    def write_perf(f,label):
+        t = f.__perfdata__
+        s = f.get_python_src(f.backend.wrapped_function)
+        ps = f.get_physl_source()
+        dir="jobdata-"+pid+"/run_dir"
+        os.makedirs(dir,exist_ok=True)
+        with open(dir+"/py-csv.txt","w") as fd:
+            print(t[0],end='',file=fd)
+        with open(dir+"/py-tree.txt","w") as fd:
+            print(t[1],end='',file=fd)
+        with open(dir+"/py-graph.txt","w") as fd:
+            print(t[2],end='',file=fd)
+        with open(dir+"/py-src.txt","w") as fd:
+            print(s,file=fd)
+        with open(dir+"/physl-src.txt","w") as fd:
+            print(ps,file=fd)
+        with open(dir+"/label.txt","w") as fd:
+            print(label,file=fd)
+    write_perf(f4,"f4(2)")
+    visualizeRemoteInTraveler(pid)
