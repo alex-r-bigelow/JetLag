@@ -2,13 +2,19 @@ from remote_run import remote_run, to_string, viz
 from jetlag import Universal, RemoteJobWatcher
 from knownsystems import *
 import sys
+from random import randint
 
 uv = Universal()
 uv.load(
-    backend=backend_tapis,
-    email="sbrandt@cct.lsu.edu",
+    backend=backend_agave,
+    notify='sbrandt@cct.lsu.edu',
     jetlag_id='rostam-sbrandt',
 )
+
+print("The complete list of valid jetlag_id's that can be used for this test:")
+for sys in uv.systems():
+    print(sys)
+print()
 
 def fib(n):
     if n < 2:
@@ -16,7 +22,10 @@ def fib(n):
     else:
         return fib(n-1)+fib(n-2)
 
-job = remote_run(uv, fib, (15,), nodes=1, ppn=1)
+fibno = randint(13,20)
+print('fib(',fibno,')=...',sep='',flush=True)
+
+job = remote_run(uv, fib, (fibno,), nodes=1, ppn=1)
 job.wait()
 print("result:",job.get_result())
 
