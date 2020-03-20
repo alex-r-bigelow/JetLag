@@ -1432,7 +1432,8 @@ class Universal:
             raise Exception("jtype="+jtype)
         job = self.fill(job)
         
-        notify = self.values["notify"]
+        notify = self.fill(self.values["notify"])
+        self.values["notify"] = notify
 
         if notify is not None:
             for event in job_done:
@@ -1639,6 +1640,7 @@ class Universal:
         
         params = (
             ('q', '{"name":"'+name+'"}'),
+            ('limit', '10000'),
         )
         
         response = requests.get(
@@ -1872,13 +1874,18 @@ if __name__ == "__main__":
     from knownsystems import *
     uv = Universal()
     backend = sys.argv[1]
-    system = sys.argv[2]
+    if len(sys.argv) > 2:
+        system = sys.argv[2]
+    else:
+        system = None
     uv.load(
         backend=backends[backend],
         notify='sbrandt@cct.lsu.edu',
         jetlag_id=system)
     uv.refresh_token()
-    if sys.argv[3] in ["job-status","status"]:
+    if len(sys.argv) <= 3:
+        pass
+    elif sys.argv[3] in ["job-status","status"]:
         j1 = RemoteJobWatcher(uv, sys.argv[4])
         pp.pprint(j1.full_status())
     elif sys.argv[3] in ["last-job-status","last-status"]:
@@ -1893,6 +1900,12 @@ if __name__ == "__main__":
         n = 0
         d = { "uuid" : sys.argv[4] }
         uv.del_meta(d)
+    elif sys.argv[3] == "set-meta":
+        meta = {
+            'name':  sys.argv[4],
+            'value': sys.argv[5]
+        }
+        uv.set_meta(meta)
     elif sys.argv[3] == "meta":
         n = 0
         for m in uv.get_meta(sys.argv[4]):

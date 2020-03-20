@@ -9,7 +9,7 @@ import html
 uv = Universal()
 uv.init(
   backend = backend_agave,
-  notify = 'sbrandt@cct.lsu.edu',
+  notify = '{NOTIFY_URL_PASSWORD}',
   **rostam
 )
 uv.configure_from_ssh_keys()
@@ -19,7 +19,7 @@ print("Job was submitted")
 j1.wait()
 assert j1.status() == "FINISHED"
 
-if False: # This does not work with Agave
+if True: 
     j2 = RemoteJobWatcher(uv, uv.hello_world_job('queue'))
     print("Job was submitted")
     j2.wait()

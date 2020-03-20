@@ -1,5 +1,6 @@
 backend_agave = {
   "baseurl" : "https://sandbox.agaveplatform.org",
+  #"baseurl" : "https://tutorial.cct.lsu.edu",
   "tenant" : "sandbox",
   "user" : "{AGAVE_USER}",
   "utype" : "agave",
@@ -70,8 +71,8 @@ rostam = {
   "machine_user" : "sbrandt",
   "machine" : 'rostam',
   "domain" : "cct.lsu.edu",
-  "port" : 8000,
-  "queue" : "rostam",
+  "port" : 22,
+  "queue" : "medusa",
   "max_jobs_per_user" : 10,
   "max_jobs" : 20,
   "max_nodes" : 256,

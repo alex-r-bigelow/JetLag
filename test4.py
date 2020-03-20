@@ -9,7 +9,8 @@ import html
 uv = Universal()
 uv.init(
   backend = backend_tapis,
-  notify = 'sbrandt@cct.lsu.edu',
+  #notify = "https://www.cct.lsu.edu/~sbrandt/pushbullet.php?key={PBTOK_PASSWORD}&status=${JOB_STATUS}:${JOB_ID}",
+  notify='sbrandt@cct.lsu.edu',
   **shelob
 )
 uv.configure_from_ssh_keys()
