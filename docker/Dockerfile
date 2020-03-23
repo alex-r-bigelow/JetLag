@@ -1,6 +1,6 @@
-FROM stevenrbrandt/phylanx.devenv:working
-
-USER root
+FROM fedora
+RUN dnf install -y curl findutils vim git which jq python3 python3-pip gcc gcc-c++ python3-devel sudo glibc-langpack-en otf2
+RUN useradd -m jovyan
 
 # Set up jupyter
 RUN pip3 install jupyter requests
@@ -17,7 +17,6 @@ WORKDIR /JetLag
 RUN find . | xargs chown jovyan
 
 RUN chown jovyan ~jovyan/.bashrc
-RUN dnf install -y jq
 WORKDIR /
 ENV LC_ALL en_US.utf8
 
