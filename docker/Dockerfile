@@ -5,12 +5,14 @@ USER root
 # Set up jupyter
 RUN pip3 install jupyter requests
 
+RUN echo 3/23/2020
 WORKDIR /
 RUN git clone https://github.com/hdc-arizona/traveler-integrated
 WORKDIR /traveler-integrated
 RUN find . | xargs chown jovyan
 RUN pip3 install -r requirements.txt
 
+RUN echo 3/23/2020
 WORKDIR /
 RUN git clone https://github.com/STEllAR-GROUP/JetLag.git
 WORKDIR /JetLag
@@ -36,4 +38,4 @@ ENV PYTHONPATH /JetLag
 # Default container command is to launch jupyter
 RUN mkdir -p /home/jovyan/workdir
 WORKDIR /home/jovyan/workdir
-CMD jupyter notebook --ip 0.0.0.0 --port 8789 --no-browser
+CMD bash /JetLag/docker/start.sh
