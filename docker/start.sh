@@ -1,7 +1,7 @@
-echo -n 'ntpdate: '
+set -x
 sudo ntpdate us.pool.ntp.org
-echo -n 'tzupdate: '
 sudo tzupdate
+set +x
 HERE=${PWD}
 cd /traveler-integrated
 git pull
