@@ -1,3 +1,7 @@
+echo -n 'ntpdate: '
+sudo ntpdate us.pool.ntp.org
+echo -n 'tzupdate: '
+sudo tzupdate
 HERE=${PWD}
 cd /traveler-integrated
 git pull
