@@ -693,7 +693,8 @@ class Universal:
                 "protocol" : "SFTP",
                 "rootDir" : "{root_dir}",
                 "homeDir" : "{home_dir}",
-                "auth" : self.auth
+                "auth" : self.auth,
+                "publicAppsDir" : "{home_dir}/apps"
             }
         })
 

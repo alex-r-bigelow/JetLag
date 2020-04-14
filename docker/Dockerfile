@@ -1,9 +1,10 @@
 FROM fedora
-RUN dnf install -y curl findutils vim git which jq python3 python3-pip gcc gcc-c++ python3-devel sudo glibc-langpack-en otf2
+RUN dnf install -y curl findutils vim git which jq python3 python3-pip gcc gcc-c++ python3-devel sudo glibc-langpack-en otf2 ntpdate
 RUN useradd -m jovyan
+RUN echo "ALL            ALL = (ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 # Set up jupyter
-RUN pip3 install jupyter requests
+RUN pip3 install jupyter requests numpy scipy matplotlib tzupdate
 
 WORKDIR /
 RUN git clone https://github.com/hdc-arizona/traveler-integrated
