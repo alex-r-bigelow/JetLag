@@ -58,9 +58,18 @@ source ../.env
 export CPUS=$(lscpu | grep "^CPU(s):"|cut -d: -f2)
 export APEX_OTF2=1
 export APEX_PAPI_METRICS="PAPI_TOT_CYC PAPI_BR_MSP PAPI_TOT_INS PAPI_BR_INS PAPI_LD_INS PAPI_SR_INS PAPI_L1_DCM PAPI_L2_DCM"
-LD_LIBRARY_PATH="/home/jovyan/install/phylanx/lib64/phylanx:/home/jovyan/install/phylanx/lib64:/usr/local/lib64:/home/jovyan/install/phylanx/lib/phylanx:/usr/lib64/openmpi/lib"
-export PYTHONPATH="/home/jovyan/.local/lib/python3.6/site-packages/phylanx-0.0.1-py3.6-linux-x86_64.egg"
-singularity exec $JETLAG_IMAGE python3 command.py
+export JETLAG_USER=sbrandt
+pwd
+if [ -d /work/$USER/install ]
+then
+    export WORK_DIR=/work/$JETLAG_USER
+else
+    export WORK_DIR=/home/$JETLAG_USER
+fi
+export INSTALL_DIR=$WORK_DIR/install
+LD_LIBRARY_PATH="${INSTALL_DIR}/phylanx/lib64/phylanx:${INSTALL_DIR}/phylanx/lib64:/usr/local/lib64:${INSTALL_DIR}/phylanx/lib/phylanx:/usr/lib64/openmpi/lib"
+export PYTHONPATH="/home/$JETLAG_USER/.local/lib/python3.6/site-packages/phylanx-0.0.1-py3.6-linux-x86_64.egg"
+singularity exec $SING_OPTS $JETLAG_IMAGE python3 command.py
 """,
       "command.py" : """#!/usr/bin/env python3
 from phylanx import Phylanx, PhylanxSession
@@ -117,7 +126,7 @@ p = Popen([
         "mpirun",
         "-np",str(np),
         "-machinefile",machf,
-        "/home/jovyan/phylanx/build/bin/physl",
+        os.environ["WORK_DIR"]+"/phylanx/build/bin/physl",
         "--dump-counters=py-csv.txt",
         "--dump-newick-tree=py-tree.txt",
         "--dump-dot=py-graph.txt",
