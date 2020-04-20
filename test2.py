@@ -3,6 +3,7 @@ from knownsystems import *
 from time import sleep
 import os
 import html
+import re
 
 # Test creation of shelob configuration using Agave
 uv = Universal()
@@ -18,6 +19,10 @@ j1 = RemoteJobWatcher(uv, uv.hello_world_job('fork'))
 print("Job was submitted")
 j1.wait()
 assert j1.status() == "FINISHED"
+err = j1.err_output()
+assert re.search(r'(?m)^This is stderr', err)
+out = j1.std_output()
+assert re.search(r'(?m)^This is stdout', out)
     
 if False: # This does not work with Agave
     j2 = RemoteJobWatcher(uv, uv.hello_world_job('queue'))

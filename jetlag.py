@@ -303,6 +303,25 @@ class RemoteJobWatcher:
         self.last_status = self.jdata["status"]
         return self.last_status
 
+    def history(self):
+        return self.uv.job_history(self.jobid)
+
+    def err_output(self):
+        self.get_result()
+        try:
+            with open("jobdata-"+self.jobid+"/job.err","r") as fd:
+                return fd.read()
+        except FileNotFoundError as fnf:
+            return ""
+
+    def std_output(self):
+        self.get_result()
+        try:
+            with open("jobdata-"+self.jobid+"/job.out","r") as fd:
+                return fd.read()
+        except FileNotFoundError as fnf:
+            return ""
+
 class Universal:
     """
     The Universal (i.e. Tapis or Agave) submitter thingy.
@@ -1845,6 +1864,7 @@ class Universal:
 
         headers = self.getheaders()
         params = ( ('limit', '100'), ('offset', '0'),)
+        pause()
         response = requests.get(self.fill("{apiurl}/jobs/v2/")+jobid+"/outputs/listings/"+dir, headers=headers, params=params)
         check(response)
         jdata = response.json()["result"]
