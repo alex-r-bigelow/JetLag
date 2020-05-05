@@ -52,6 +52,7 @@ def visualizeRemoteInTraveler(jobid):
     mainResponse = requests.post(url, json=postData)
 
     otf2Path = pre+'/OTF2_archive/APEX.otf2'
+    otf2Response = None
     if os.path.exists(otf2Path):
         # Upload the OTF2 trace separately because we want to stream its
         # contents instead of trying to load the whole thing into memory
@@ -65,6 +66,8 @@ def visualizeRemoteInTraveler(jobid):
             data=iterOtf2(),
             headers={'content-type': 'text/text'}
         )
+    else:
+        print('OTF2 does not exist: %s' % otf2Path)
     if in_notebook():
         display(HTML("<a target='the-viz' href='"+base_url+"/static/interface.html?x=%f'>%s</a>" % (random(), label)))
     else:
