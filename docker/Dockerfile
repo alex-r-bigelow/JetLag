@@ -1,5 +1,5 @@
 FROM fedora
-RUN dnf install -y curl findutils vim git which jq python3 python3-pip gcc gcc-c++ python3-devel sudo glibc-langpack-en otf2 ntpdate
+RUN dnf install -y curl findutils vim git which jq python3 python3-pip gcc gcc-c++ python3-devel sudo glibc-langpack-en otf2 ntpdate procps-ng
 RUN useradd -m jovyan
 RUN echo "ALL            ALL = (ALL) NOPASSWD: ALL" >> /etc/sudoers
 
