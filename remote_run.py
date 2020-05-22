@@ -74,6 +74,7 @@ singularity exec $SING_OPTS $JETLAG_IMAGE python3 command.py
       "command.py" : """#!/usr/bin/env python3
 from phylanx import Phylanx, PhylanxSession
 import codecs, pickle, re, os
+import numpy as np
 
 cpus = int(os.environ["CPUS"].strip())
 PhylanxSession.init(16)
