@@ -108,7 +108,7 @@ def pause():
     if len(time_array) == 0:
         os.makedirs(tmp_dir, exist_ok=True)
         time_array = []
-        for i in range(18):
+        for i in range(pause_files):
             tmp_file = tmp_dir+"/t_"+str(i)
             if not os.path.exists(tmp_file):
                 with open(tmp_file,"w") as fd:
@@ -1679,7 +1679,8 @@ class Universal:
 
     def job_status(self, jobid):
         headers = self.getheaders()
-        pause()
+        # Rion says this is a db lookup, so no pause is needed here
+        # pause()
         response = requests.get(self.fill("{apiurl}/jobs/v2/")+jobid, headers=headers)
         if response.status_code == 404:
             return None
@@ -1733,6 +1734,8 @@ class Universal:
     def get_file(self,jobid,fname,as_file=None):
         headers = self.getheaders()
         pause()
+        # Prevent double slashes
+        fname = re.sub(r'^/','',fname)
         response = requests.get(self.fill("{apiurl}/jobs/v2/")+jobid+"/outputs/media/"+fname, headers=headers)
         check(response)
         content = response.content
