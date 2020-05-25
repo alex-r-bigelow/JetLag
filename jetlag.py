@@ -377,6 +377,11 @@ class Universal:
 
         rexp = r'^machine-config-(.*)-'+jetlag_id+r'$'
         m = self.get_meta(rexp)
+        if len(m) != 1:
+            print("Bad meta data... multiple entries match reg ex:",rexp)
+            for k in m:
+                print("  ",k["name"],k["uuid"])
+            assert False
         assert len(m) > 0, "Could not locate machine '"+jetlag_id+"'"+' '+rexp
         g = re.match(rexp, m[0]["name"])
         self.values["other"] = g.group(1)
@@ -1904,6 +1909,8 @@ if __name__ == "__main__":
     if len(sys.argv) > 2:
         system = sys.argv[2]
     else:
+        system = None
+    if system == "None":
         system = None
     uv.load(
         backend=backends[backend],
