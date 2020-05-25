@@ -1790,13 +1790,13 @@ class Universal:
         return jdata["result"][0]["permission"]
 
     def system_role(self, system, user, role):
-        print("system_role:",system, user, role)
         data = json.dumps({"role":role})
         headers = self.getheaders(data)
         
         url = self.fill('{apiurl}/systems/v2/'+system+'/roles/'+user)
         response = requests.post(url, headers=headers, data=data)
         check(response)
+        print("system role =",end='')
         self.show(response)
 
     def apps_pems(self, app, user, pem):
@@ -1806,6 +1806,7 @@ class Universal:
         url=self.fill('{apiurl}/apps/v2/'+app+'/pems/'+user)
         response = requests.post(url, headers=headers, data=data)
         check(response)
+        print("apps pems =",end='')
         self.show(response)
 
     def meta_pems(self, uuid, user, pem):
@@ -1815,6 +1816,7 @@ class Universal:
         url=self.fill('{apiurl}/meta/v2/data/'+uuid+'/pems/'+user)
         response = requests.post(url, headers=headers, data=data)
         check(response)
+        print("meta pems =",end='')
         self.show(response)
 
     def show(self,r):
