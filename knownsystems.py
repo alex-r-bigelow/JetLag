@@ -72,7 +72,7 @@ rostam = {
   "machine" : 'rostam',
   "domain" : "cct.lsu.edu",
   "port" : 22,
-  "queue" : "medusa",
+  "queue" : "marvin",
   "max_jobs_per_user" : 10,
   "max_jobs" : 20,
   "max_nodes" : 256,

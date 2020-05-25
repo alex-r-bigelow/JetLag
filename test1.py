@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from jetlag import Universal, pp, mk_input, pcmd, RemoteJobWatcher
 from knownsystems import *
 

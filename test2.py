@@ -24,7 +24,7 @@ assert re.search(r'(?m)^This is stderr', err)
 out = j1.std_output()
 assert re.search(r'(?m)^This is stdout', out)
     
-if False: # This does not work with Agave
+if True: # This does not work with Agave
     j2 = RemoteJobWatcher(uv, uv.hello_world_job('queue'))
     print("Job was submitted")
     j2.wait()

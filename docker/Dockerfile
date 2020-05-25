@@ -21,6 +21,12 @@ RUN chown jovyan ~jovyan/.bashrc
 WORKDIR /
 ENV LC_ALL en_US.utf8
 
+# Patch traveler
+WORKDIR /traveler-integrated
+RUN dnf install -y patch
+COPY patch.txt ./
+RUN patch -p1 < patch.txt
+
 USER jovyan
 
 # Fix otf2 path
@@ -32,8 +38,8 @@ RUN python3 install.py
 ENV PATH /usr/local/cli/bin:/traveler-integrated/notebook/agave-cli/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 ENV PYTHONPATH /JetLag
 
-
-# Default container command is to launch jupyter
 RUN mkdir -p /home/jovyan/workdir
 WORKDIR /home/jovyan/workdir
+
+# Default container command is to launch jupyter
 CMD bash /JetLag/docker/start.sh
