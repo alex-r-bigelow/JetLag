@@ -354,7 +354,7 @@ class Universal:
           "max_run_time" : "unknown",
           "max_procs_per_node" : -666,
           "min_procs_per_node" : -666,
-          "allocation" : "hpc_cmr",
+          "allocation" : "{allocation}",
           "app_name" : "{jetlag_id}_queue_{other}",
           "fork_app_name" : "{jetlag_id}_fork_{other}",
           "app_version" : "1.0.0",
@@ -1790,6 +1790,7 @@ class Universal:
         return jdata["result"][0]["permission"]
 
     def system_role(self, system, user, role):
+        print("system_role:",system, user, role)
         data = json.dumps({"role":role})
         headers = self.getheaders(data)
         
