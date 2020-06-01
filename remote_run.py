@@ -85,6 +85,25 @@ def to_string(obj):
 def from_string(s):
     return pickle.loads(codecs.decode(s,'base64'))
 
+import numpy as np
+def fstr(a):
+    if type(a) in [float, int, str, np.int64, np.float64, np.int32, np.float32]:
+        return str(a)
+    elif type(a) in [list,np.ndarray]:
+        s = "["
+        for i in range(len(a)):
+            if i > 0:
+                s += ","
+            if i % 10 == 9:
+                # Note that because this is a string, the backslash
+                # n will get expanded... so double it.
+                s += "\\n"
+            s += fstr(a[i])
+        s += "]"
+        return s
+    else:
+        raise Exception("Unsupported type "+str(type(a)))
+
 args = from_string({argsrc})
 
 @Phylanx
@@ -96,7 +115,7 @@ with open("call_{funname}.physl","w") as fw:
     for i in range(len(args)):
         argn = "a"+str(i)
         alist += [argn]
-        aasign += ["define(",argn+","+str(args[i])+")"]
+        aasign += ["define(",argn+","+fstr(args[i])+")"]
     from phylanx.ast.physl import print_physl_src
     import contextlib, io
     physl_src_raw = {funname}.get_physl_source()
