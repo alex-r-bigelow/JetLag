@@ -1986,6 +1986,8 @@ if __name__ == "__main__":
     elif sys.argv[3] == 'systems':
         for sys in uv.systems():
             print(sys)
+    elif sys.argv[3] == 'systems':
+        uv.systems()
     elif sys.argv[3] == 'mkdir':
         uv.make_dir(sys.argv[4])
     else:
