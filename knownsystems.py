@@ -49,7 +49,7 @@ shelob = {
   "max_run_time" : "72:00:00",
   "max_procs_per_node" : 16,
   "min_procs_per_node" : 16,
-  "allocation" : "hpc_etktest02",
+  "allocation" : "hpc_cmr2",
   "scheduler" : "CUSTOM_TORQUE",
   "scratch_dir" : "/scratch/{machine_user}",
   "work_dir" : "/work/{machine_user}",

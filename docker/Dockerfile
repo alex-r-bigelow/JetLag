@@ -22,10 +22,10 @@ WORKDIR /
 ENV LC_ALL en_US.utf8
 
 # Patch traveler
-WORKDIR /traveler-integrated
-RUN dnf install -y patch
-COPY patch.txt ./
-RUN patch -p1 < patch.txt
+#WORKDIR /traveler-integrated
+#RUN dnf install -y patch
+#COPY patch.txt ./
+#RUN patch -p1 < patch.txt
 
 USER jovyan
 
