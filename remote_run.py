@@ -142,11 +142,11 @@ with open("call_{funname}.physl","w") as fw:
                 print("localhost",file=fd)
 
 from subprocess import Popen, PIPE
-p = Popen([
+cmd = [
         "mpirun",
         "-np",str(np),
         "-machinefile",machf,
-        os.environ["WORK_DIR"]+"/phylanx/build/bin/physl",
+        os.environ["WORK_DIR"]+"/phylanx/build.Release/bin/physl",
         "--dump-counters=py-csv.txt",
         "--dump-newick-tree=py-tree.txt",
         "--dump-dot=py-graph.txt",
@@ -154,8 +154,11 @@ p = Popen([
         "--print=result.py",
         "call_{funname}.physl"
     ]
-    ,stdout=PIPE,stderr=PIPE,universal_newlines=True)
+print("cmd:",' '.join(cmd))
+p = Popen(cmd,stdout=PIPE,stderr=PIPE,universal_newlines=True)
 out, err = p.communicate()
+print(out,end='')
+print(err,end='')
 
 with open("physl-src.txt","w") as fd:
     print(physl_src_pretty,file=fd)

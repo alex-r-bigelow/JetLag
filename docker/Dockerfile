@@ -4,7 +4,7 @@ RUN useradd -m jovyan
 RUN echo "ALL            ALL = (ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 # Set up jupyter
-RUN pip3 install jupyter requests numpy scipy matplotlib tzupdate
+RUN pip3 install jupyter requests numpy scipy matplotlib tzupdate email-validator
 
 WORKDIR /
 RUN git clone https://github.com/hdc-arizona/traveler-integrated
@@ -22,10 +22,10 @@ WORKDIR /
 ENV LC_ALL en_US.utf8
 
 # Patch traveler
-#WORKDIR /traveler-integrated
-#RUN dnf install -y patch
-#COPY patch.txt ./
-#RUN patch -p1 < patch.txt
+WORKDIR /traveler-integrated
+RUN dnf install -y patch
+COPY patch2.txt ./
+RUN patch -p1 < patch2.txt
 
 USER jovyan
 

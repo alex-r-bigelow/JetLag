@@ -811,7 +811,6 @@ class Universal:
     def create_or_refresh_token(self):
         auth_file = self.get_auth_file()
         if os.path.exists(auth_file):
-            print("auth_file:",auth_file)
             self.auth_mtime = os.path.getmtime(auth_file)
         if not self.refresh_token():
             self.create_token()
