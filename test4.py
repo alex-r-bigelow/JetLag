@@ -1,5 +1,7 @@
 from jetlag import Universal, pp, mk_input, pcmd, RemoteJobWatcher
 from knownsystems import *
+import pprint
+pp = pprint.PrettyPrinter(indent=4)
 
 from time import sleep
 import os
@@ -23,8 +25,9 @@ assert j1.status() == "FINISHED"
 j2 = RemoteJobWatcher(uv, uv.hello_world_job('queue'))
 print("Job was submitted")
 j2.wait()
-assert j2.status() == "FINISHED"
-
+if j2.status() != "FINISHED":
+    pp.pprint(j2.full_status())
+    assert False
 
 print("Test passed")
 exit(0)

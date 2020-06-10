@@ -355,8 +355,8 @@ class Universal:
           "max_procs_per_node" : -666,
           "min_procs_per_node" : -666,
           "allocation" : "{allocation}",
-          "app_name" : "{jetlag_id}_queue_{other}",
-          "fork_app_name" : "{jetlag_id}_fork_{other}",
+          "app_name" : "{machine}-{machine_user}_queue_{other}",
+          "fork_app_name" : "{machine}-{machine_user}_fork_{other}",
           "app_version" : "1.0.0",
           "deployment_path" : "new-{utype}-deployment",
           "scheduler" : "unknown",
@@ -375,54 +375,48 @@ class Universal:
         if jetlag_id is None or jetlag_id.strip().lower() == "none":
             return
 
-        rexp = r'^machine-config-(.*)-'+jetlag_id+r'$'
-        m = self.get_meta(rexp)
-        if len(m) != 1:
-            print("Bad meta data... multiple entries match reg ex:",rexp)
-            for k in m:
-                print("  ",k["name"],k["uuid"])
-            assert False
-        assert len(m) > 0, "Could not locate machine '"+jetlag_id+"'"+' '+rexp
-        g = re.match(rexp, m[0]["name"])
-        self.values["other"] = g.group(1)
+        # Jetlag id is: machine-login_user-creating_user
+        # If the creating user is missing, we search through
+        # the jetlag id's to see if we can find something
+        # that matches the machine and login_user. If that
+        # is missing or not unique, it cannot be used.
+        g = re.match(r'^(\w+)-(\w+)(?:-(\w+)|)', jetlag_id)
+        assert g, 'Invalid jetlag id: %s' % jetlag_id
+        if g.group(3) is None:
+            jids = self.jetlag_ids()
+            found = None
+            for jid in jids:
+                g2 = re.match(r'^(\w+)-(\w+)(?:-(\w+)|)', jid)
+                if g.group(1) == g2.group(1) and g.group(2) == g2.group(2):
+                    assert found is None, "Invalid jetlag id: '%s'" % jetlag_id
+                    found = g2
+            assert found, "Invalid jetlag id: '%s'" % jetlag_id
+            g = g2
 
-        self.values["storage_id"] = self.fill('{jetlag_id}-storage-{other}')
-        self.values["execm_id"] = self.fill('{jetlag_id}-exec-{other}')
-        self.values["forkm_id"] = self.fill('{jetlag_id}-fork-{other}')
-        self.values["machine"] = self.fill(m[0]["value"]["machine"])
-        m = self.get_exec()
-        if m is None:
-            return
-        mname = m["name"]
-        g = re.search(r'\((.*)\)',mname)
-        assert g, mname
-        self.values["machine_user"] = g.group(1)
-        self.mk_extra()
-
-        self.values['sys_pw'] = backend['pass']
-        self.values["domain"] = m["site"]
-        self.values["queue"] = m["queues"][0]["name"]
-        self.values["max_jobs_per_user"] = m["maxSystemJobsPerUser"]
-        self.values["max_jobs"] = m["maxSystemJobs"]
-        self.values["max_nodes"] = m["queues"][0]["maxNodes"]
-
-        self.values["max_procs_per_node"] = m["queues"][0]["maxProcessorsPerNode"]
-        if "minProcessorsPerNode" in m["queues"][0]:
-            self.values["min_procs_per_node"] = m["queues"][0]["minProcessorsPerNode"]
-        else:
-            self.values["min_procs_per_node"] = m["queues"][0]["maxProcessorsPerNode"]
-        self.values["max_run_time"] = m["queues"][0]["maxRequestedTime"]
-        self.values["custom_directives"] = m["queues"][0]["customDirectives"]
-        self.values["scheduler"] = m["scheduler"]
-        self.values["work_dir"] = re.sub(r'/$','',m["workDir"])
-        self.values["scratch_dir"] = re.sub(r'/$','',m["scratchDir"])
-        self.values["port"] = m["storage"]["port"]
-        #self.values = self.fill(self.values)
-
-        # Check for missing values
-        for k in self.values:
-            assert self.values[k] != "unknown", "Please supply a string value for '%s'" % k
-            assert self.values[k] != -666, "Please supply an integer value for '%s'" % k
+        self.values['other'] = g.group(3)
+        self.values['machine_user'] = g.group(2)
+        self.values['machine'] = g.group(1)
+        self.values['storage_id'] = "%s-%s-storage-%s" % (g.group(1), g.group(2), g.group(3))
+        self.values['execm_id'] = "%s-%s-exec-%s" % (g.group(1), g.group(2), g.group(3))
+        self.values['forkm_id'] = "%s-%s-fork-%s" % (g.group(1), g.group(2), g.group(3))
+        self.values['app_id'] = "%s-%s_queue_%s-1.0.0" % (g.group(1), g.group(2), g.group(3))
+        self.values['fork_app_id'] = "%s-%s_fork_%s-1.0.0" % (g.group(1), g.group(2), g.group(3))
+    
+        ex  = self.get_exec()
+        self.values['work_dir'] =    re.sub(r'/+$','',ex['workDir'])
+        self.values['scratch_dir'] = re.sub(r'/+$','',ex['scratchDir'])
+        self.values['scheduler'] = ex['scheduler']
+        self.values['custom_directives'] = ex['queues'][0]['customDirectives']
+        self.values['max_run_time'] = ex['queues'][0]['maxRequestedTime']
+        self.values['max_procs_per_node'] = ex['queues'][0]['maxProcessorsPerNode']
+        self.values['max_jobs'] = ex['queues'][0]['maxJobs']
+        self.values['max_nodes'] = ex['queues'][0]['maxNodes']
+        self.values['max_procs_per_node'] = ex['queues'][0]['maxProcessorsPerNode']
+        self.values['min_procs_per_node'] = ex['queues'][0]['maxProcessorsPerNode']
+        self.values['queue'] = ex['queues'][0]['name']
+        self.values['domain'] = ex['site']
+        self.values['max_jobs_per_user'] = ex['maxSystemJobsPerUser']
+        self.values['job_dir'] = self.jobs_dir()
 
     def check_values(self, values):
         values = self.fill(values)
@@ -465,9 +459,9 @@ class Universal:
         for k in self.values:
             assert self.values[k] != "unknown", "Please supply a string value for '%s'" % k
             assert self.values[k] != -666, "Please supply an integer value for '%s'" % k
-        self.values["storage_id"] = self.fill('{jetlag_id}-storage-{other}')
-        self.values["execm_id"] = self.fill('{jetlag_id}-exec-{other}')
-        self.values["forkm_id"] = self.fill('{jetlag_id}-fork-{other}')
+        self.values["storage_id"] = self.fill('{machine}-{machine_user}-storage-{other}')
+        self.values["execm_id"] = self.fill('{machine}-{machine_user}-exec-{other}')
+        self.values["forkm_id"] = self.fill('{machine}-{machine_user}-fork-{other}')
         self.mk_extra()
 
         name = "machine-config-"+self.values["other"]+"-"+self.values["jetlag_id"]
@@ -817,6 +811,7 @@ class Universal:
     def create_or_refresh_token(self):
         auth_file = self.get_auth_file()
         if os.path.exists(auth_file):
+            print("auth_file:",auth_file)
             self.auth_mtime = os.path.getmtime(auth_file)
         if not self.refresh_token():
             self.create_token()
@@ -1861,13 +1856,52 @@ class Universal:
         self.values["job_dir"] = job_dir
         return job_dir
 
-    def systems(self):
-        s = set()
-        for m in self.get_meta('machine-config-.*'):
-            val = m['value']
-            if 'jetlag_id' in val:
-                s.add(val['jetlag_id'])
-        return list(s)
+    def systems_list(self):
+        headers = self.getheaders()
+        response = requests.get(self.fill("{apiurl}/systems/v2/"), headers=headers)
+        check(response)
+        jdata = response.json()["result"]
+        return jdata
+
+    def apps_list(self):
+        headers = self.getheaders()
+        response = requests.get(self.fill("{apiurl}/apps/v2/"), headers=headers)
+        check(response)
+        jdata = response.json()["result"]
+        return jdata
+
+    def jetlag_ids(self):
+        execms = {}
+        storms = {}
+        forkms = {}
+        forks = {}
+        queues = {}
+        for s in self.systems_list():
+            g = re.match(r'^(\w+)-(\w+)-(storage|exec|fork)-(\w+)$', s['id'])
+            if g:
+                key = "%s-%s-%s" % (g.group(1), g.group(2), g.group(4))
+                if g.group(3) == "exec":
+                    execms[key] = 1
+                elif g.group(3) == "storage":
+                    storms[key] = 1
+                else:
+                    forkms[key] = 1
+        for a in self.apps_list():
+            # shelob-funwave_fork_tg457049-1.0.0
+            g = re.match(r'^(\w+)-(\w+)_(fork|queue)_(\w+)-(\d+\.\d+\.\d+)', a['id'])
+            if g:
+                key = "%s-%s-%s" % (g.group(1), g.group(2), g.group(4))
+                if g.group(3) == 'fork':
+                    assert key not in forks
+                    forks[key] = a['id']
+                else:
+                    assert key not in queues
+                    queues[key] = a['id']
+        jetlag_ids = []
+        for k in execms:
+            if k in storms and k in forkms and k in forks and k in queues:
+                jetlag_ids += [k]
+        return jetlag_ids
 
     def show_job(self,jobid,dir='',verbose=True,recurse=True):
         if dir == "" and verbose:
@@ -1990,5 +2024,7 @@ if __name__ == "__main__":
         uv.systems()
     elif sys.argv[3] == 'mkdir':
         uv.make_dir(sys.argv[4])
+    elif sys.argv[3] == 'jetlagid':
+        pp.pprint(uv.jetlag_ids())
     else:
         raise Exception(sys.argv[3])
