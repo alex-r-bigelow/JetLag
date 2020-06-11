@@ -2,6 +2,7 @@ from jetlag import Universal, pp, mk_input, pcmd, RemoteJobWatcher
 from knownsystems import *
 from time import sleep
 import os
+import sys
 import html
 import inspect
 import codecs, pickle, re
@@ -73,7 +74,7 @@ singularity exec $SING_OPTS $JETLAG_IMAGE python3 command.py
 """,
       "command.py" : """#!/usr/bin/env python3
 from phylanx import Phylanx, PhylanxSession
-import codecs, pickle, re, os
+import codecs, pickle, re, os, sys
 import numpy as np
 
 cpus = int(os.environ["CPUS"].strip())
@@ -106,7 +107,7 @@ def fstr(a):
 
 args = from_string({argsrc})
 
-@Phylanx
+@Phylanx(startatlineone=True)
 {funsrc}
 
 with open("call_{funname}.physl","w") as fw:
@@ -155,10 +156,11 @@ cmd = [
         "call_{funname}.physl"
     ]
 print("cmd:",' '.join(cmd))
+print("cmd:",' '.join(cmd),file=sys.stderr)
 p = Popen(cmd,stdout=PIPE,stderr=PIPE,universal_newlines=True)
 out, err = p.communicate()
 print(out,end='')
-print(err,end='')
+print(err,end='',file=sys.stderr)
 
 with open("physl-src.txt","w") as fd:
     print(physl_src_pretty,file=fd)
