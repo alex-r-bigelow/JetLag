@@ -381,7 +381,7 @@ class Universal:
             "pass" : passw,
             "utype" : utype
         }
-        self.load(backend
+        self.load(backend, notify, jetlag_id)
 
     def load(self,backend,notify=None,jetlag_id=None):
         self.values['backend']=backend
