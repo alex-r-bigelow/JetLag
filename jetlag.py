@@ -363,6 +363,25 @@ class Universal:
           "custom_directives" : ''
         }
 
+    def loadf(self,utype,user,passw,baseurl=None,tenant=None,notify=None,jetlag_id=None):
+        if baseurl is None:
+            if utype.lower() == 'agave':
+                baseurl = "https://sandbox.agaveplatform.org"
+            else:
+                baseurl = "https://api.tacc.utexas.edu",
+        if tenant is None:
+            if utype.lower() == 'agave':
+                baseurl = "sandbox"
+            else:
+                baseurl = "tacc.prod"
+        backend = {
+            "baseurl" : baseurl,
+            "tenant" : tenant,
+            "user" : user,
+            "pass" : passw,
+            "utype" : utype
+        }
+        self.load(backend
 
     def load(self,backend,notify=None,jetlag_id=None):
         self.values['backend']=backend
