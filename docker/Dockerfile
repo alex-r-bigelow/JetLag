@@ -11,6 +11,9 @@ RUN git clone https://github.com/hdc-arizona/traveler-integrated
 WORKDIR /traveler-integrated
 RUN find . | xargs chown jovyan
 RUN pip3 install -r requirements.txt
+WORKDIR /traveler-integrated/profiling_tools/clibs
+RUN python3 rp_extension_build.py
+RUN mv _cCalcBin.*.so ..
 
 WORKDIR /
 RUN git clone https://github.com/STEllAR-GROUP/JetLag.git
@@ -22,10 +25,10 @@ WORKDIR /
 ENV LC_ALL en_US.utf8
 
 # Patch traveler
-WORKDIR /traveler-integrated
-RUN dnf install -y patch
-COPY patch2.txt ./
-RUN patch -p1 < patch2.txt
+#WORKDIR /traveler-integrated
+#RUN dnf install -y patch
+#COPY patch2.txt ./
+#RUN patch -p1 < patch2.txt
 
 USER jovyan
 

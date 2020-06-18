@@ -10,7 +10,7 @@ services:
       dockerfile: Dockerfile
     container_name: trav
     privileged: true
-    image: trav
+    image: stevenrbrandt/trav
     ports:
       - 8789:8789
       - 8000:8000
