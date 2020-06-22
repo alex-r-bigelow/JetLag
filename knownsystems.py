@@ -81,7 +81,8 @@ rostam = {
   "min_procs_per_node" : 1,
   "scheduler" : "SLURM",
   "scratch_dir" : "/home/{machine_user}",
-  "work_dir" : "/home/{machine_user}"
+  "work_dir" : "/home/{machine_user}",
+  "allocation" : "medusa"
 }
 
 systems = {
