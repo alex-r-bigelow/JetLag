@@ -12,7 +12,7 @@
 #    (c) packs everything up into output.tgz
 #
 #####
-
+import hashlib, base64
 import os
 if "JETLAG_DEBUG" in os.environ:
     import diagrequests as requests
@@ -36,6 +36,14 @@ from getpass import getpass
 os.environ["AGAVE_JSON_PARSER"]="jq"
 
 job_done = ["FAILED", "FINISHED", "STOPPED", "BLOCKED"]
+
+def codeme(m):
+    if type(m) == str:
+        m = m.encode()
+    h = hashlib.md5(m)
+    v = base64.b64encode(h.digest())
+    s = re.sub(r'[\+/]','_', v.decode())
+    return s[:-2]
 
 def decode_bytes(bs):
     s = ''
@@ -373,9 +381,9 @@ class Universal:
                 baseurl = "https://api.tacc.utexas.edu",
         if tenant is None:
             if utype.lower() == 'agave':
-                baseurl = "sandbox"
+                tenant = "sandbox"
             else:
-                baseurl = "tacc.prod"
+                tenant = "tacc.prod"
         backend = {
             "baseurl" : baseurl,
             "tenant" : tenant,
@@ -383,6 +391,7 @@ class Universal:
             "pass" : passw,
             "utype" : utype
         }
+        print(">>back:",backend)
         self.load(backend, notify, jetlag_id)
 
     def load(self,backend,notify=None,jetlag_id=None):
@@ -459,6 +468,7 @@ class Universal:
             tenant=None,notify=None):
         self.loadf(utype,user,passw,baseurl,tenant,notify,None)
         self.values["machine"] = machine
+        self.values["apiurl"] = baseurl
         self.values["domain"] = domain
         self.values["allocation"] = allocation
         self.values["max_run_time"] = max_run_time
@@ -561,10 +571,11 @@ class Universal:
 
     def get_auth_file(self):
         user = self.fill("{sys_user}")
+        burl = codeme(self.values["backend"]["baseurl"])
         if self.values['utype'] == 'tapis':
-            auth_file = os.environ["HOME"]+"/.tapis/"+user+"/current"
+            auth_file = os.environ["HOME"]+"/.tapis/"+user+"/"+burl+"/current"
         else:
-            auth_file = os.environ["HOME"]+"/.agave/"+user+"/current"
+            auth_file = os.environ["HOME"]+"/.agave/"+user+"/"+burl+"/current"
         return auth_file
 
     def getauth(self):

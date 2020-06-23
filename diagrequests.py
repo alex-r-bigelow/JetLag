@@ -11,12 +11,16 @@ def all(mname, args, kargs):
     pp.pprint(args)
     print("kargs:")
     k = 'Authorization'
-    auth = kargs["headers"].get(k, None)
-    if auth is not None:
-        kargs["headers"][k] = "[hidden]"
+    h = kargs.get('headers',None)
+    if h:
+        auth = h.get(k, None)
+        if auth is not None:
+            h[k] = "[hidden]"
+    else:
+        auth = None
     pp.pprint(kargs)
     if auth is not None:
-        kargs["headers"][k] = auth
+        h[k] = auth
     print("="*50)
     print()
 
