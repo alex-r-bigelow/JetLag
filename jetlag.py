@@ -329,6 +329,8 @@ class Universal:
     def __init__(self):
 
         self.auth_age = 0
+        self.public_key = None
+        self.private_key = None
 
         # Required options with default values.
         # Values of "uknown" or -666 mean the
@@ -446,6 +448,40 @@ class Universal:
             assert k in self.values, "Missing: "+k
             assert values[k] == self.values[k],'k: '+k+' = '+str(values[k]) + " != " + str(self.values[k])
 
+    def initf(self,utype,machine,machine_user,domain,port:int=22,
+            queue='unknown',max_jobs_per_user:int=1,max_jobs:int=1,
+            max_nodes:int=1,scratch_dir="/scratch/{machine_user}",
+            work_dir="/work/{machine_user}",home_dir="/home/{machine_user}",\
+            root_dir="/",max_run_time="01:00:00",max_procs_per_node=16,\
+            min_procs_per_node=16,allocation="N/A",\
+            scheduler="SLURM",custom_directives=None,\
+            user=None,passw=None,baseurl=None, \
+            tenant=None,notify=None):
+        self.loadf(utype,user,passw,baseurl,tenant,notify,None)
+        self.values["machine"] = machine
+        self.values["domain"] = domain
+        self.values["allocation"] = allocation
+        self.values["max_run_time"] = max_run_time
+        self.values["other"]= user
+        self.values["machine_user"] = machine_user
+        self.values["work_dir"] = self.fill(work_dir)
+        self.values["home_dir"] = self.fill(home_dir)
+        self.values["scratch_dir"] = self.fill(scratch_dir)
+        self.values["root_dir"] = self.fill(root_dir)
+        self.values["queue"] = queue
+        self.values["min_procs_per_node"] = min_procs_per_node
+        self.values["max_procs_per_node"] = max_procs_per_node
+        self.values["max_jobs_per_user"] = max_jobs_per_user
+        self.values["max_jobs"] = max_jobs
+        self.values["max_nodes"] = max_nodes
+
+        self.values["app_name"] = self.fill("{machine}-{machine_user}_queue_{other}")
+        self.values["fork_app_name"] = self.fill("{machine}-{machine_user}_fork_{other}")
+        self.values["storage_id"] = self.fill('{machine}-{machine_user}-storage-{other}')
+        self.values["execm_id"] = self.fill('{machine}-{machine_user}-exec-{other}')
+        self.values["forkm_id"] = self.fill('{machine}-{machine_user}-fork-{other}')
+        self.mk_extra()
+
     def init(self,**kwargs):
         # Required options with default values.
         # Values of "uknown" or -666 mean the
@@ -509,33 +545,7 @@ class Universal:
         # Authenticate to Agave/Tapis
         # Use generic refresh if possible
 
-        # Create and load ssh keys
-        if not os.path.exists("uapp-key.pub"):
-            r, o, e =pcmd(["ssh-keygen","-m","PEM","-t","rsa","-f","uapp-key","-P",""])
-            assert r == 0
-
-        self.public_key = readf('uapp-key.pub')
-        self.private_key = readf('uapp-key')
-
-        # Create the ssh auth structure for
-        # use by storage and execution systems
-        self.ssh_auth = self.fill({
-            "username" : "{machine_user}",
-            "publicKey" : self.public_key,
-            "privateKey" : self.private_key,
-            "type" : "SSHKEYS"
-        })
-
-        # Create the password auth structure for
-        # use by storage and execution systems
-        self.pw_auth = self.fill({
-            "username" : "{machine_user}",
-            "password" : "",
-            "type" : "PASSWORD"
-        })
-
-        # Default to password
-        self.auth = self.pw_auth
+        self.set_auth_type('PASSWORD')
 
     def set_backend(self):
         backend = self.values["backend"]
@@ -626,8 +636,8 @@ class Universal:
                     val = None
                     if key in self.values.keys():
                         cy = copy(cycle)
-                        val = self.fill(self.values[key],cy)
                         cy[key]=1
+                        val = self.fill(self.values[key],cy)
                     else:
                         if re.match(r'.*_USER$',key):
                             val = load_input(key,False)
@@ -657,11 +667,14 @@ class Universal:
         self.install_key()
         self.configure_from_ssh_keys()
 
-    def configure_from_ssh_keys(self):
+    def configure_from_ssh_keys(self, pub_key=None, priv_key=None):
         """
         Completely configure the univeral system
         starting from ssh keys.
         """
+        if pub_key is not None or priv_key is not None:
+            self.public_key = pub_key.strip()
+            self.private_key = priv_key.strip()
         self.set_auth_type("SSHKEYS")
         self.mk_storage(force=True)
         self.mk_execution(force=True)
@@ -672,8 +685,31 @@ class Universal:
         Determine whether we are using passw or ssh
         """
         if auth == "SSHKEYS":
+            if self.public_key is None:
+                # Create and load ssh keys
+                if not os.path.exists("uapp-key.pub"):
+                    r, o, e =pcmd(["ssh-keygen","-m","PEM","-t","rsa","-f","uapp-key","-P",""])
+                    assert r == 0
+                self.public_key = readf('uapp-key.pub')
+                self.private_key = readf('uapp-key')
+    
+            # Create the ssh auth structure for
+            # use by storage and execution systems
+            self.ssh_auth = self.fill({
+                "username" : "{machine_user}",
+                "publicKey" : self.public_key,
+                "privateKey" : self.private_key,
+                "type" : "SSHKEYS"
+            })
             self.auth = self.ssh_auth
         elif auth == "PASSWORD":
+            # Create the password auth structure for
+            # use by storage and execution systems
+            self.pw_auth = self.fill({
+                "username" : "{machine_user}",
+                "password" : "",
+                "type" : "PASSWORD"
+            })
             self.auth = self.pw_auth
         else:
             raise Exception("auth:"+str(auth))
