@@ -38,8 +38,13 @@ os.environ["AGAVE_JSON_PARSER"]="jq"
 job_done = ["FAILED", "FINISHED", "STOPPED", "BLOCKED"]
 
 def codeme(m):
-    if type(m) == str:
+    t = type(m)
+    if t == str:
         m = m.encode()
+    elif t == bytes:
+        pass
+    else:
+        raise Exception(str(t))
     h = hashlib.md5(m)
     v = base64.b64encode(h.digest())
     s = re.sub(r'[\+/]','_', v.decode())
@@ -378,7 +383,7 @@ class Universal:
             if utype.lower() == 'agave':
                 baseurl = "https://sandbox.agaveplatform.org"
             else:
-                baseurl = "https://api.tacc.utexas.edu",
+                baseurl = "https://api.tacc.utexas.edu"
         if tenant is None:
             if utype.lower() == 'agave':
                 tenant = "sandbox"
@@ -391,7 +396,6 @@ class Universal:
             "pass" : passw,
             "utype" : utype
         }
-        print(">>back:",backend)
         self.load(backend, notify, jetlag_id)
 
     def load(self,backend,notify=None,jetlag_id=None):
@@ -561,7 +565,12 @@ class Universal:
 
     def get_auth_file(self):
         user = self.fill("{sys_user}")
-        burl = codeme(self.values["backend"]["baseurl"])
+        burl = codeme("~".join([
+            self.values["backend"]["tenant"],
+            self.values["backend"]["baseurl"],
+            self.values["backend"]["utype"],
+            self.values["backend"]["user"]
+        ]))
         if self.values['utype'] == 'tapis':
             auth_file = os.environ["HOME"]+"/.tapis/"+user+"/"+burl+"/current"
         else:
