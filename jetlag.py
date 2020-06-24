@@ -103,7 +103,7 @@ def old_pause():
 
 time_array = []
 
-pause_files = 9
+pause_files = 6
 pause_time = 30
 
 def key2(a):
@@ -534,16 +534,6 @@ class Universal:
             "name" : name,
             "value" : machine_meta
         }
-        mv = self.get_meta(name)
-
-        # Make sure there's some data there
-        if len(mv) == 0:
-            mv = [{"value":""}]
-
-        # Only update the metadata if it's
-        # been modified.
-        if mv[0]["value"] != mm["value"]:
-            self.set_meta(mm)
 
     def mk_extra(self):
         # Create a few extra values
@@ -913,10 +903,11 @@ class Universal:
             assert jdata["name"] == client_name
 
         url = self.fill('{apiurl}/clients/v2/')
-        response = requests.post(url, data=data, auth=auth)
+        params = ( ('pretty', 'true'),)
+        response = requests.post(url, data=data, auth=auth, params=params)
         check(response)
         jdata = response.json()["result"]
-        check(response)
+        pp.pprint(jdata)
         c_key = jdata['consumerKey']
         c_secret = jdata['consumerSecret']
 

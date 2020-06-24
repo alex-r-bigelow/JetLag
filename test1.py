@@ -14,6 +14,12 @@ uv.init(
   notify = '{NOTIFY_URL_PASSWORD}',
   **rostam
 )
+os.unlink(uv.get_auth_file())
+uv.init(
+  backend = backend_agave2,
+  notify = '{NOTIFY_URL_PASSWORD}',
+  **rostam
+)
 uv.configure_from_ssh_keys()
 
 j1 = RemoteJobWatcher(uv, uv.hello_world_job('fork'))
