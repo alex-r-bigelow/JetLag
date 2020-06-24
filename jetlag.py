@@ -907,7 +907,6 @@ class Universal:
         response = requests.post(url, data=data, auth=auth, params=params)
         check(response)
         jdata = response.json()["result"]
-        pp.pprint(jdata)
         c_key = jdata['consumerKey']
         c_secret = jdata['consumerSecret']
 
