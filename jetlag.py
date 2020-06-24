@@ -903,8 +903,7 @@ class Universal:
             assert jdata["name"] == client_name
 
         url = self.fill('{apiurl}/clients/v2/')
-        params = ( ('pretty', 'true'),)
-        response = requests.post(url, data=data, auth=auth, params=params)
+        response = requests.post(url, data=data, auth=auth)
         check(response)
         jdata = response.json()["result"]
         c_key = jdata['consumerKey']
