@@ -300,11 +300,36 @@ class RemoteJobWatcher:
                         self.uv.get_file(self.jobid, out, jobdir+"/"+re.sub(r'.*\.','job.',out))
             if os.path.exists(jobdir+'/run_dir/result.py'):
               with open(jobdir+'/run_dir/result.py',"r") as fd:
-                self.result = eval(fd.read().strip())
+                # Mostly, PhySL data structures look like Python
+                # data structures. Unfortunately, PhySL will
+                # construct a list as list(1,2,3). This is illegal
+                # in Python. Convert to list((1,2,3)). A more
+                # general solution is probably needed.
+                val = fd.read().strip()
+                if re.match(r'^list\(', val):
+                    val = 'list('+re.sub(r'^list','',val)+')'
+                self.result = eval(val)
             else:
               self.result = None
             return self.result
         return None
+
+    def diag(self):
+        """
+        Diagnose a job to see
+        whether it worked or
+        what might have caused
+        it to fail.
+        """
+        f = self.full_status()
+        if "lastStatusMessage" in f:
+            print("Last Status:",f["lastStatusMessage"])
+        h = self.history()
+        print("History:")
+        if len(h) > 3:
+            pp.pprint(h[-3:])
+        else:
+            pp.pprint(h)
 
     def full_status(self):
         return self.uv.job_status(self.jobid)

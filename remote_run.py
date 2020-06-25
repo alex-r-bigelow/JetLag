@@ -88,8 +88,8 @@ def from_string(s):
 
 import numpy as np
 def fstr(a):
-    if type(a) in [float, int, str, np.int64, np.float64, np.int32, np.float32]:
-        return str(a)
+    if type(a) in [bool, float, int, str, np.int64, np.float64, np.int32, np.float32]:
+        return str(a).lower()
     elif type(a) in [list,np.ndarray]:
         s = "["
         for i in range(len(a)):
@@ -135,7 +135,11 @@ with open("call_{funname}.physl","w") as fw:
     if "PBS_NODEFILE" in os.environ:
         machf = os.environ["PBS_NODEFILE"]
     elif "SLURM_JOB_NODELIST" in os.environ:
-        machf = os.environ["SLURM_JOB_NODELIST"]
+        hosts = os.environ["SLURM_JOB_NODELIST"]
+        machf = "hosts.txt"
+        with open(machf,"w") as fd:
+            for i in range(np):
+                print(hosts,file=fd)
     else:
         machf = "hosts.txt"
         with open(machf,"w") as fd:
