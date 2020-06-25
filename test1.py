@@ -10,7 +10,7 @@ import re
 # Test creation of shelob configuration using Agave
 uv = Universal()
 uv.init(
-  backend = backend_agave,
+  backend = backend_agave2,
   notify = '{NOTIFY_URL_PASSWORD}',
   **rostam
 )
