@@ -508,6 +508,8 @@ class Universal:
         self.values["scratch_dir"] = self.fill(scratch_dir)
         self.values["root_dir"] = self.fill(root_dir)
         self.values["queue"] = queue
+        self.values["scheduler"] = scheduler
+        self.values["custom_directives"] = custom_directives
         self.values["min_procs_per_node"] = min_procs_per_node
         self.values["max_procs_per_node"] = max_procs_per_node
         self.values["max_jobs_per_user"] = max_jobs_per_user
