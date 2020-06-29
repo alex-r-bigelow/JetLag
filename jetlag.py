@@ -14,10 +14,7 @@
 #####
 import hashlib, base64
 import os
-if "JETLAG_DEBUG" in os.environ:
-    import diagrequests as requests
-else:
-    import requests
+import diagrequests as requests
 import pprint
 from math import log, ceil
 from subprocess import Popen, PIPE
@@ -108,7 +105,7 @@ def old_pause():
 
 time_array = []
 
-pause_files = 6
+pause_files = 5
 pause_time = 30
 
 def key2(a):
@@ -163,7 +160,12 @@ def check(response):
     Called after receiving a response from the requests library to ensure that
     an error was not received.
     """
-    assert response.status_code in success_codes, str(response)+response.content.decode()
+    if response.status_code not in success_codes:
+        requests.show()
+        msg = str(response)
+        if response.content is not None:
+            msg += response.content.decode()
+        raise Exception(msg)
 
 def idstr(val,max_val):
     """
@@ -1485,6 +1487,8 @@ class Universal:
             for m in self.get_meta(k):
                 print("Property '%s' is already set" % k)
                 return None
+
+        self.refresh_token()
 
         if input_tgz is not None:
             mk_input(input_tgz)
