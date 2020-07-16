@@ -148,11 +148,12 @@ with open("call_{funname}.physl","w") as fw:
 
 from subprocess import Popen, PIPE
 cmd = [
-        "mpirun",
-        "-np",str(np),
-        "-machinefile",machf,
+        "hpxrun.py",
+        "-l",str(np),
+        #"-machinefile",machf,
         #os.environ["WORK_DIR"]+"/phylanx/build.Release/bin/physl",
         os.environ["PHYSL_EXE"],
+        "--",
         "--dump-counters=py-csv.txt",
         "--dump-newick-tree=py-tree.txt",
         "--dump-dot=py-graph.txt",
