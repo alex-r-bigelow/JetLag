@@ -94,7 +94,6 @@ def age(fname):
     return t2 - t1
 
 last_time = time()
-pause_time = 5.1
 def old_pause():
     global last_time
     now = time()
@@ -107,6 +106,7 @@ time_array = []
 
 pause_files = 5
 pause_time = 30
+poll_time = 5
 
 def key2(a):
     return int(1e6*a[1])
@@ -278,7 +278,7 @@ class RemoteJobWatcher:
             if n != s:
                 print(n)
                 s = n
-                sleep(2)
+            sleep(poll_time)
             if n in job_done:
                 return
 
@@ -1817,7 +1817,7 @@ class Universal:
         while True:
             # A wait is baked into the job status
             # inside the check() method.
-            sleep(pause_time)
+            sleep(poll_time)
             jdata = self.job_status(jobid)
             new_status = jdata["status"]
             if new_status != last_status:
