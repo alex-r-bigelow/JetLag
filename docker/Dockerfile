@@ -1,7 +1,6 @@
-FROM fedora
+FROM stevenrbrandt/phylanx.rel.test:working
+USER root
 RUN dnf install -y curl findutils vim git which jq python3 python3-pip gcc gcc-c++ python3-devel sudo glibc-langpack-en otf2 ntpdate procps-ng
-RUN useradd -m jovyan
-RUN echo "ALL            ALL = (ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 # Set up jupyter
 RUN pip3 install jupyter requests numpy scipy matplotlib tzupdate email-validator gui_fun
@@ -25,6 +24,7 @@ WORKDIR /
 ENV LC_ALL en_US.utf8
 
 USER jovyan
+RUN mkdir -p /home/jovyan/workdir
 
 # Fix otf2 path
 ENV PATH="/usr/local/otf2/bin:${PATH}"
@@ -35,8 +35,8 @@ RUN python3 install.py
 ENV PATH /usr/local/cli/bin:/traveler-integrated/notebook/agave-cli/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 ENV PYTHONPATH /JetLag
 
-RUN mkdir -p /home/jovyan/workdir
 WORKDIR /home/jovyan/workdir
 
 # Default container command is to launch jupyter
-CMD bash /JetLag/docker/start.sh
+COPY start.sh /usr/local/bin/start.sh
+CMD bash /usr/local/bin/start.sh

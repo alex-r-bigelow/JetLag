@@ -8,7 +8,7 @@ backend_agave = {
 }
 
 backend_agave2 = {
-  "baseurl" : "https://agave.cct.lsu.edu/",
+  "baseurl" : "https://agave.cct.lsu.edu",
   "tenant" : "sandbox",
   "user" : "{AGAVE2_USER}",
   "utype" : "agave",
