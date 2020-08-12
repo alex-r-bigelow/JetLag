@@ -34,6 +34,7 @@ WORKDIR /home/jovyan/workenv
 RUN python3 install.py
 ENV PATH /usr/local/cli/bin:/traveler-integrated/notebook/agave-cli/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 ENV PYTHONPATH /JetLag
+ENV PYTHONUSERBASE /usr/local/userbase
 
 WORKDIR /home/jovyan/workdir
 
