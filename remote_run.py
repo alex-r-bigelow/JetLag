@@ -137,20 +137,24 @@ with open("call_{funname}.physl","w") as fw:
                 print("localhost",file=fd)
 
 from subprocess import Popen, PIPE
-cmd = [
-        "hpxrun.py",
-        "-l",str(np),
-        #"-machinefile",machf,
-        #os.environ["WORK_DIR"]+"/phylanx/build.Release/bin/physl",
-        os.environ["PHYSL_EXE"],
-        "--",
-        "--dump-counters=py-csv.txt",
-        "--dump-newick-tree=py-tree.txt",
-        "--dump-dot=py-graph.txt",
-        "--performance",
-        "--print=result.py",
-        "call_{funname}.physl"
-    ]
+use_mpi = True
+cmd = []
+if use_mpi:
+    cmd += ["mpirun","-np",str(np)]
+    #"-machinefile",machf,
+else:
+    cmd += ["hpxrun.py","-l",str(np)]
+cmd += [os.environ["PHYSL_EXE"]]
+if not use_mpi:
+    cmd += ["--"]
+cmd += [
+    "--dump-counters=py-csv.txt",
+    "--dump-newick-tree=py-tree.txt",
+    "--dump-dot=py-graph.txt",
+    "--performance",
+    "--print=result.py",
+    "call_{funname}.physl"
+]
 print("cmd:",' '.join(cmd))
 print("cmd:",' '.join(cmd),file=sys.stderr)
 p = Popen(cmd,stdout=PIPE,stderr=PIPE,universal_newlines=True)
