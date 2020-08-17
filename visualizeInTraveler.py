@@ -72,7 +72,10 @@ def visualizeInTraveler(fun, verbose=False):
         )
         if verbose:
             print(otf2Response.content.decode())
-    display(HTML("<a target='the-viz' href='http://localhost:8000'>Traveler</a>"))
+    if in_notebook():
+        display(HTML("<a target='the-viz' href='"+base_url+"/static/interface.html?x=%f'>Visualize %s-%d</a>" % (random(), fun_name, fun_id)))
+    else:
+        print("URL:", base_url+"/static/interface.html")
 
 
 def visualizeRemoteInTraveler(jobid):
@@ -118,7 +121,7 @@ def visualizeRemoteInTraveler(jobid):
             headers={'content-type': 'text/text'}
         )
     if in_notebook():
-        display(HTML("<a target='the-viz' href='"+base_url+"/static/interface.html?x=%f'>%s</a>" % (random(), label)))
+        display(HTML("<a target='the-viz' href='"+base_url+"/static/interface.html?x=%f'>Visualize %s</a>" % (random(), label)))
     else:
         print("URL:", base_url+"/static/interface.html")
     return (mainResponse, otf2Response)

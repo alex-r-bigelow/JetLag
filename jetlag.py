@@ -310,7 +310,10 @@ class RemoteJobWatcher:
                 val = fd.read().strip()
                 if re.match(r'^list\(', val):
                     val = 'list('+re.sub(r'^list','',val)+')'
-                self.result = eval(val)
+                try:
+                    self.result = eval(val)
+                except Exception as e:
+                    self.result = val
             else:
               self.result = None
             return self.result
