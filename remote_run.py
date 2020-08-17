@@ -29,11 +29,11 @@ def mk_label(fname, real_args):
 
 
 
-def viz(job):
+def viz(job,verbose=False):
     try:
       with open("run_dir/name.txt","r") as fd:
         fname = fd.read().strip()
-      response = visualizeRemoteInTraveler(job.jobid)
+      response = visualizeRemoteInTraveler(job.jobid,verbose=verbose)
     except Exception as e:
       print("Could not visualize result, Traveler missing/unavailable:")
       print("exception:",e)

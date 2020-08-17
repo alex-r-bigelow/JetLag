@@ -29,8 +29,8 @@ def visualizeInTraveler(fun, verbose=False):
     fun_name = fun.backend.wrapped_function.__name__
 
     if verbose:
-        print("APEX_OTF2:",os.environ.get("APEX_OTF2","Unset"))
-        print("APEX_PAPI_METRICS:",os.environ.get("APEX_PAPI_METRICS","Unset"))
+        print("APEX_OTF2:",os.environ.get("APEX_OTF2","is not set"))
+        print("APEX_PAPI_METRICS:",os.environ.get("APEX_PAPI_METRICS","is not set"))
 
     if not hasattr(fun,"__perfdata__"):
         print("Performance data was not collected for", fun_name)
@@ -78,7 +78,7 @@ def visualizeInTraveler(fun, verbose=False):
         print("URL:", base_url+"/static/interface.html")
 
 
-def visualizeRemoteInTraveler(jobid):
+def visualizeRemoteInTraveler(jobid, verbose=False):
     pre = 'jobdata-'+jobid+'/run_dir'
 
     # The only requirement is a label
@@ -105,6 +105,8 @@ def visualizeRemoteInTraveler(jobid):
     # Create the dataset in traveler
     url = base_url + '/datasets/%s' % quote_plus(label)
     mainResponse = requests.post(url, json=postData)
+    if verbose:
+        print(mainResponse.content.decode())
 
     otf2Path = pre+'/OTF2_archive/APEX.otf2'
     if os.path.exists(otf2Path):
@@ -120,6 +122,8 @@ def visualizeRemoteInTraveler(jobid):
             data=iterOtf2(),
             headers={'content-type': 'text/text'}
         )
+        if verbose:
+            print(otf2Response.content.decode())
     if in_notebook():
         display(HTML("<a target='the-viz' href='"+base_url+"/static/interface.html?x=%f'>Visualize %s</a>" % (random(), label)))
     else:
