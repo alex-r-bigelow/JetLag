@@ -433,7 +433,7 @@ class Universal:
         self.set_backend()
         self.create_or_refresh_token()
 
-        if jetlag_id is None or jetlag_id.strip().lower() == "none":
+        if jetlag_id is None or jetlag_id.strip().lower() in ["none", "unknown", ""]:
             return
 
         # Jetlag id is: machine-login_user-creating_user
