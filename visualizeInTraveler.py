@@ -1,3 +1,4 @@
+from random import randint
 import inspect
 from datetime import datetime
 from urllib.parse import quote_plus
@@ -22,6 +23,57 @@ def in_notebook():
         return True
     except:
         return False
+
+def visualizeInTraveler(fun, verbose=False):
+    fun_id = randint(0,2<<31)
+    fun_name = fun.backend.wrapped_function.__name__
+
+    if verbose:
+        print("APEX_OTF2:",os.environ.get("APEX_OTF2","Unset"))
+        print("APEX_PAPI_METRICS:",os.environ.get("APEX_PAPI_METRICS","Unset"))
+
+    if not hasattr(fun,"__perfdata__"):
+        print("Performance data was not collected for", fun_name)
+        return
+
+    argMap = {
+        "csv":    fun.__perfdata__[0],
+        "newick": fun.__perfdata__[1],
+        "dot":    fun.__perfdata__[2],
+        "physl":  fun.get_physl_source(),
+        "python": fun.get_python_src(fun.backend.wrapped_function)
+    }
+    import requests
+    base_url = "http://localhost:8000"
+    
+    # This loop iterates until we've found an unused id
+    while True:
+        url = base_url + '/datasets/%s-%d' % (fun_name, fun_id)
+        fun_id = randint(0, 2<<31)
+        resp = requests.post(url, json=argMap)
+        if "already exists" not in resp.content.decode():
+            break
+    if verbose:
+        print(resp.content.decode())
+        
+    otf2Path = 'OTF2_archive/APEX.otf2'
+    if os.path.exists(otf2Path):
+        # Upload the OTF2 trace separately because we want to stream its
+        # contents instead of trying to load the whole thing into memory
+        def iterOtf2():
+            otfPipe = subprocess.Popen(['otf2-print', otf2Path], stdout=subprocess.PIPE)
+            for line in otfPipe.stdout:
+                yield line
+        otf2Response = requests.post(
+            url + '/otf2',
+            stream=True,
+            data=iterOtf2(),
+            headers={'content-type': 'text/text'}
+        )
+        if verbose:
+            print(otf2Response.content.decode())
+    display(HTML("<a target='the-viz' href='http://localhost:8000'>Traveler</a>"))
+
 
 def visualizeRemoteInTraveler(jobid):
     pre = 'jobdata-'+jobid+'/run_dir'
