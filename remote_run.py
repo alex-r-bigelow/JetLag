@@ -60,6 +60,7 @@ export CPUS=$(lscpu | grep "^CPU(s):"|cut -d: -f2)
 export APEX_OTF2=1
 export APEX_PAPI_METRICS="PAPI_TOT_CYC PAPI_BR_MSP PAPI_TOT_INS PAPI_BR_INS PAPI_LD_INS PAPI_SR_INS PAPI_L1_DCM PAPI_L2_DCM"
 export PYTHONUSERBASE=/usr/local/userbase
+export PHYSL_EXE=/usr/local/build/bin/physl
 pwd
 singularity exec $SING_OPTS $JETLAG_IMAGE python3 command.py
 """,
