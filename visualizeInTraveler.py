@@ -5,6 +5,9 @@ from urllib.parse import quote_plus
 import requests
 import subprocess
 import os
+import contextlib, io
+from phylanx.ast.physl import print_physl_src
+
 try:
     from IPython.core.display import display, HTML
 except:
@@ -16,6 +19,10 @@ if "TRAVELER_PORT" in os.environ:
 else:
     traveler_port = 8000
 base_url = "http://localhost:%d" % traveler_port
+
+def print_chunks(resp):
+    for chunk in resp.iter_content():
+        print(chunk.decode(),end='')
 
 def in_notebook():
     try:
@@ -36,11 +43,16 @@ def visualizeInTraveler(fun, verbose=False):
         print("Performance data was not collected for", fun_name)
         return
 
+    physl_src_raw = fun.get_physl_source()
+    f = io.StringIO()
+    with contextlib.redirect_stdout(f):
+        print_physl_src(physl_src_raw)
+
     argMap = {
         "csv":    fun.__perfdata__[0],
         "newick": fun.__perfdata__[1],
         "dot":    fun.__perfdata__[2],
-        "physl":  fun.get_physl_source(),
+        "physl":  f.getvalue(),
         "python": fun.get_python_src(fun.backend.wrapped_function)
     }
     import requests
@@ -71,7 +83,7 @@ def visualizeInTraveler(fun, verbose=False):
             headers={'content-type': 'text/text'}
         )
         if verbose:
-            print(otf2Response.content.decode())
+            print_chunks(otf2Response)
     if in_notebook():
         display(HTML("<a target='the-viz' href='"+base_url+"/static/interface.html?x=%f'>Visualize %s-%d</a>" % (random(), fun_name, fun_id)))
     else:
@@ -106,7 +118,7 @@ def visualizeRemoteInTraveler(jobid, verbose=False):
     url = base_url + '/datasets/%s' % quote_plus(label)
     mainResponse = requests.post(url, json=postData)
     if verbose:
-        print(mainResponse.content.decode())
+        print_chunks(mainResponse)
 
     otf2Path = pre+'/OTF2_archive/APEX.otf2'
     if os.path.exists(otf2Path):
@@ -123,7 +135,7 @@ def visualizeRemoteInTraveler(jobid, verbose=False):
             headers={'content-type': 'text/text'}
         )
         if verbose:
-            print(otf2Response.content.decode())
+            print_chunks(otf2Response)
     if in_notebook():
         display(HTML("<a target='the-viz' href='"+base_url+"/static/interface.html?x=%f'>Visualize %s</a>" % (random(), label)))
     else:
