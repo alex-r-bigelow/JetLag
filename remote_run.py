@@ -140,6 +140,18 @@ with open("call_{funname}.physl","w") as fw:
 
 from subprocess import Popen, PIPE
 use_mpi = True
+open("/hpx/build/CMakeCache.txt", "r") as fd:
+    for line in fd.readlines():
+        g = re.match(r'HPX_WITH_PARCELPORT_MPI:BOOL=(\w+)',line)
+        if g:
+            val = g.group(1).lower()
+            if val == "on":
+                use_mpi = True
+            elif vall == "off":
+                use_mpi = False
+            else:
+                raise Exception("Bad MPI parcelport value")
+            break
 cmd = []
 if use_mpi:
     cmd += ["mpirun","-np",str(np)]
