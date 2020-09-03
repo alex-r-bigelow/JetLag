@@ -90,8 +90,7 @@ def visualizeInTraveler(fun, verbose=False):
         print("URL:", base_url+"/static/interface.html")
 
 
-def visualizeRemoteInTraveler(jobid, verbose=False):
-    pre = 'jobdata-'+jobid+'/run_dir'
+def visualizeDirInTraveler(jobid, pre, verbose=False):
 
     # The only requirement is a label
     if not os.path.exists(pre+'/label.txt'):
@@ -149,3 +148,7 @@ if __name__ == "__main__":
         print(chunk.decode(), end='')
     for chunk in o.iter_content():
         print(chunk.decode(), end='')
+
+def visualizeRemoteInTraveler(jobid, verbose=False):
+    pre = 'jobdata-'+jobid+'/run_dir'
+    visualizeDirInTraveler(jobid, pre, verbose)
