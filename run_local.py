@@ -3,6 +3,7 @@ from phylanx import Phylanx
 import subprocess as s
 from visualizeInTraveler import visualizeDirInTraveler
 from random import randint
+from IPython.core.display import display, HTML
 
 def run_local(f,args,threads=1,localities=1,perf=True):
     if not hasattr(f, "backend"):
@@ -74,5 +75,11 @@ def run_local(f,args,threads=1,localities=1,perf=True):
     def viz():
         nonlocal job_id, perf_dir
         visualizeDirInTraveler(job_id, perf_dir, True)
+    def download():
+        nonlocal perf_dir, randval
+        tar_file = 'perf-%d.tgz' % randval
+        s.call(['tar','cvzf',tar_file, perf_dir])
+        display(HTML("<a target='download' href='%s'>Download: %s</a>" % (tar_file, tar_file)))
     p.viz = viz
+    p.download = download
     return p
