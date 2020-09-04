@@ -19,6 +19,9 @@ RUN git clone https://github.com/STEllAR-GROUP/JetLag.git
 WORKDIR /JetLag
 RUN find . | xargs chown jovyan
 
+WORKDIR /traveler-integrated
+RUN patch -p1 < /JetLag/docker/patch.txt
+
 RUN chown jovyan ~jovyan/.bashrc
 WORKDIR /
 ENV LC_ALL en_US.utf8

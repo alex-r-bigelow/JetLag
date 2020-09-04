@@ -1,0 +1,117 @@
+diff --git a/bundle.py b/bundle.py
+index d322ca0..a6ed037 100755
+--- a/bundle.py
++++ b/bundle.py
+@@ -37,9 +37,11 @@ class FakeFile: #pylint: disable=R0903
+         self.name = name
+     async def __aiter__(self):
+         # otfPipe = subprocess.Popen(['otf2-print', self.name], stdout=subprocess.PIPE)
+-        otfPipe = subprocess.Popen(['otf2-print', self.name], stdout=subprocess.PIPE)
+-        for line in otfPipe.stdout:
+-            yield line.decode()
++        print("Parsing with bundle")
++        otfPipe = subprocess.Popen(['otf2-print', self.name], stdout=subprocess.PIPE, universal_newlines=True)
++        out, err = otfPipe.communicate()
++        for line in out.splitline()
++            yield line
+ 
+ async def main():
+     args = vars(parser.parse_args())
+diff --git a/data_store/_otf2Functions.py b/data_store/_otf2Functions.py
+index 523e8d9..87150e4 100755
+--- a/data_store/_otf2Functions.py
++++ b/data_store/_otf2Functions.py
+@@ -6,6 +6,16 @@ from blist import sortedlist #pylint: disable=import-error
+ from intervaltree import Interval, IntervalTree #pylint: disable=import-error
+ from .loggers import logToConsole
+ 
++last_line_read = ''
++
++def set_last_line(line):
++    global last_line_read
++    last_line_read = line
++
++def get_last_line():
++    global last_line_read
++    return last_line_read
++
+ # Tools for handling OTF2 traces
+ eventLineParser = re.compile(r'^(\S+)\s+(\d+)\s+(\d+)\s+(.*)$')
+ attrParsers = {
+@@ -77,6 +87,7 @@ async def processOtf2(self, label, file, storeEvents=False, log=logToConsole):
+     skippedMetricsForMismatch = 0
+ 
+     async for line in file:
++        set_last_line(line)
+         eventLineMatch = eventLineParser.match(line)
+         addAttrLineMatch = addAttrLineParser.match(line)
+         metricLineMatch = metricLineParser.match(line)
+@@ -135,11 +146,14 @@ async def processOtf2(self, label, file, storeEvents=False, log=logToConsole):
+                 currentEvent[attrMatch.group(1)] = attrMatch.group(2)
+         else:
+             # This line contains additional event attributes
++            if not (currentEvent is not None and addAttrLineMatch is not None):
++                print("WEIRD:",get_last_line(),attrStr)
++                continue
+             assert currentEvent is not None and addAttrLineMatch is not None
+             attrList = addAttrSplitter.split(addAttrLineMatch.group(1))
+             for attrStr in attrList:
+                 attr = addAttrParser.match(attrStr)
+-                assert attr is not None
++                assert attr is not None, "Could not parse: "+attrStr
+                 currentEvent[attr.group(1)] = attr.group(2) #pylint: disable=unsupported-assignment-operation
+     # The last event will never have had a chance to be processed:
+     if currentEvent is not None:
+diff --git a/profiling_tools/_cCalcBin.cpython-36m-x86_64-linux-gnu.so b/profiling_tools/_cCalcBin.cpython-36m-x86_64-linux-gnu.so
+old mode 100644
+new mode 100755
+index eb290dd..198a776
+Binary files a/profiling_tools/_cCalcBin.cpython-36m-x86_64-linux-gnu.so and b/profiling_tools/_cCalcBin.cpython-36m-x86_64-linux-gnu.so differ
+diff --git a/serve.py b/serve.py
+index bab3cd2..29bb051 100755
+--- a/serve.py
++++ b/serve.py
+@@ -4,6 +4,7 @@ import argparse
+ import json
+ import asyncio
+ from enum import Enum
++from time import time
+ 
+ import numpy as np
+ import uvicorn  # pylint: disable=import-error
+@@ -214,19 +215,25 @@ class FakeOtf2File:  # pylint: disable=R0903
+     def __init__(self, request):
+         self.name = 'APEX.otf2'
+         self.request = request
++        self.tstart = time()
+ 
+     async def __aiter__(self):
+-        line = ''
++        content = ''
++        print("Parsing with Fake OTF2")
+         async for chunk in self.request.stream():
+-            line += chunk.decode()
+-            done = False
+-            while not done:
+-                done = True
+-                i = line.find('\n')
+-                if i >= 0:
+-                    yield line[0:i]
+-                    line = line[i+1:]
+-                    done = False
++            content += chunk.decode()
++        print("Content read")
++        skip = False
++        for line in content.splitlines():
++            if 'dijkstra_termination_action' in line or 'shutdown_all_action' in line:
++                skip = True
++            elif skip:
++                skip = False
++            else:
++                yield line
++        content = None # free memory
++        tend = time()
++        print("All lines processed in %f seconds" % (tend-self.tstart))
+ 
+ 
+ @app.post('/datasets/{label}/otf2')
