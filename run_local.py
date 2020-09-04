@@ -4,6 +4,14 @@ import subprocess as s
 from visualizeInTraveler import visualizeDirInTraveler
 from random import randint
 from IPython.core.display import display, HTML
+import contextlib, io
+from phylanx.ast.physl import print_physl_src
+
+def prettify_physl(physl_src_raw):
+    iof = io.StringIO()
+    with contextlib.redirect_stdout(iof):
+        print_physl_src(physl_src_raw)
+    return iof.getvalue()
 
 def run_local(f,args,threads=1,localities=1,perf=True):
     if not hasattr(f, "backend"):
@@ -35,6 +43,12 @@ def run_local(f,args,threads=1,localities=1,perf=True):
         mpi = "/usr/lib64/mpich/bin/mpirun"
     
     if perf:
+
+        py_src = f.get_python_src(f.backend.wrapped_function)
+
+        physl_src_raw = f.get_physl_source()
+        physl_src = prettify_physl(physl_src_raw)
+
         while True:
             randval = randint(1, 2<<31)
             perf_dir = "perf-%d" % randval
@@ -42,6 +56,10 @@ def run_local(f,args,threads=1,localities=1,perf=True):
             if not os.path.exists(perf_dir):
                 break
         os.makedirs(perf_dir)
+        with open("%s/py-src.txt" % perf_dir, "w") as fd:
+            print(py_src, file=fd)
+        with open("%s/physl-src.txt" % perf_dir, "w") as fd:
+            print(physl_src, file=fd)
 
     cmd = [mpi,"-np",str(localities),"/usr/local/build/bin/physl"]
     if perf:
