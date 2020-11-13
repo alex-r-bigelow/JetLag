@@ -20,8 +20,8 @@ WORKDIR /JetLag
 RUN find . | xargs chown jovyan
 
 WORKDIR /traveler-integrated
-RUN dnf install -y patch
-RUN patch -p1 < /JetLag/docker/patch.txt
+#RUN dnf install -y patch
+#RUN patch -p1 < /JetLag/docker/patch.txt
 
 RUN chown jovyan ~jovyan/.bashrc
 WORKDIR /
