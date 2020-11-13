@@ -1,0 +1,6 @@
+{
+    "exclude":[
+        "dijkstra_termination_action",
+        "shutdown_all_action"
+    ]
+}
