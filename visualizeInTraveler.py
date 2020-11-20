@@ -135,6 +135,8 @@ def visualizeDirInTraveler(jobid, pre, verbose=False):
         )
         if verbose:
             print_chunks(otf2Response)
+    else:
+        otf2Response = None
     if in_notebook():
         display(HTML("<a target='the-viz' href='"+base_url+"/static/interface.html?x=%f'>Visualize %s</a>" % (random(), label)))
     else:

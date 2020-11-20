@@ -34,6 +34,19 @@ try:
 except:
     has_paramiko = False
 
+
+def esc(v):
+    nv = ''
+    nvs = 0
+    modified = False
+    for g in re.finditer(r'[^\w/:\.-]', v):
+        modified = True
+        nv += v[nvs:g.start()]
+        nv += '%' + str(ord(g.group(0)))
+        nvs = g.end()
+    nv += v[nvs:]
+    return (nv, modified)
+
 # This class allows Paramiko to behave
 # like a subprocess.Popen() proc.
 class ParamikoProc:
@@ -83,12 +96,30 @@ def subproc(cmd):
         cmd = cmd[0:2] + sing + cmd[2:]
 
     # Pass environment variables along in Linux
+    # Also save the current directory PWD. This
+    # assumes a shared file system.
     if cmd[0] == "ssh":
-        ecmd = []
-        for e in options.environ.split(','):
+
+        # Locate the env.py command and add it to the path
+        xdir = os.path.abspath(os.path.join(__file__, os.pardir))
+        ecmd = ["python3",os.path.join(xdir, "env.py")]
+
+        # Encode all environment variables
+        for e in options.environ.split(',')+['PWD']:
             if re.match(r'^\w+$', e):
-                ecmd += ["%s='%s'" % (e,os.environ.get(e,""))]
+                value = os.environ.get(e, "")
+                value, modified = esc(value)
+                if modified:
+                    # The value contains special
+                    # characters. Escaping them with
+                    # quotes turns out to be kind of
+                    # difficult.
+                    ecmd += ["%s%%=%s" % (e,value)]
+                else:
+                    ecmd += ["%s=%s" % (e, value)]
+
         cmd = cmd[0:2] + ecmd + cmd[2:]
+
 
     proc = Popen(cmd, **kwargs)
     procs.append(proc)

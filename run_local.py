@@ -62,21 +62,6 @@ def run_local(f,args,threads=1,localities=1,perf=True,apex=True):
 
     # Run the command from the image
     cmd += ["/usr/local/build/bin/physl", "--"]
-
-    if perf:
-        cmd += [
-            "--dump-counters=py-csv.txt",
-            "--dump-newick-tree=py-tree.txt",
-            "--dump-dot=py-graph.txt",
-            "--performance"]
-    cmd += [
-        "--print=result.py",
-        "--hpx:ignore-batch-env",
-        "--hpx:ini=hpx.parcel.tcp.enable=1",
-        "--hpx:ini=hpx.parcel.mpi.enable=0",
-        "--hpx:run-hpx-main",
-        file_name
-        ]
     
     job_id = None
 
@@ -103,6 +88,23 @@ def run_local(f,args,threads=1,localities=1,perf=True,apex=True):
         os.environ["APEX_OTF2_ARCHIVE_PATH"] = apex_otf2_path
 
 
+    if perf:
+        cmd += [
+            "--dump-counters="+perf_dir+"/py-csv.txt",
+            "--dump-newick-tree="+perf_dir+"/py-tree.txt",
+            "--dump-dot="+perf_dir+"/py-graph.txt",
+            "--print="+perf_dir+"/result.py",
+            "--performance"]
+    else:
+        cmd += ["--print=result.py"]
+    cmd += [
+        "--hpx:ignore-batch-env",
+        "--hpx:ini=hpx.parcel.tcp.enable=1",
+        "--hpx:ini=hpx.parcel.mpi.enable=0",
+        "--hpx:run-hpx-main",
+        file_name
+        ]
+
     if apex:
         os.environ["APEX_OTF2"]="1"
     else:
@@ -128,7 +130,7 @@ def run_local(f,args,threads=1,localities=1,perf=True,apex=True):
     p.download = download
     out, err = p.communicate()
     if err.strip != "":
-        display(HTML("<div style='background: #FFDDDD; padding: 5pt; border: solid;'>"+html.escape(err)+"</div>"))
+        display(HTML("<div style='background: #FFDDDD; padding: 5pt; border: solid;'><pre>"+html.escape(err)+"</pre></div>"))
     if out.strip != "":
         print(out)
     return p

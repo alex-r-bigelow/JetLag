@@ -51,6 +51,9 @@ def remote_run(uv, fun, args, queue='fork', lim='00:05:00', nodes=0, ppn=0):
     label = mk_label(funname, args)
 
     input_tgz = {
+      "hpxrun-jetlag.py" : open("/JetLag/hpxrun-jetlag.py", "r").read(),
+      "env.py" : open("/JetLag/env.py", "r").read(),
+      "filter.json" : open("/JetLag/filter.json", "r").read(),
       "py-src.txt" : src,
       "label.txt" : label,
       "name.txt" : funname,
@@ -65,12 +68,58 @@ pwd
 singularity exec $SING_OPTS $JETLAG_IMAGE python3 command.py
 """,
       "command.py" : """#!/usr/bin/env python3
-from phylanx import Phylanx, PhylanxSession
 import codecs, pickle, re, os, sys
-import numpy as np
 
-cpus = int(os.environ["CPUS"].strip())
-PhylanxSession.init(16)
+# Need to make sure APEX is turned off
+# when we generate the physl source files
+# otherwise things hang.
+os.environ["APEX_OTF2"]="0"
+
+from phylanx import Phylanx, PhylanxSession
+import numpy as np
+import socket
+
+# Possibly convert a host name to an ipaddress
+def format_host(host, ipaddr):
+    if ipaddr:
+        return socket.gethostbyname(host)
+    else:
+        return host
+
+# Slurm gives hostnames like: mach[01-02]
+# instead of  mach01,mach02. Expand this out.
+def unslurm(fname, ipaddr=False):
+    hosts = []
+    g = re.match(r'([\w-]+)\[([\d,-]+)\]', fname)
+    if g:
+        base = g.group(1)
+        for ext in g.group(2).split(','):
+            g2 = re.match(r'(\d+)-(\d+)', ext)
+            if g2:
+                assert len(g2.group(1)) == len(g2.group(2))
+                fmt = "%0"+str(len(g2.group(1)))+"d"
+                for i in range(int(g2.group(1)), int(g2.group(2))+1):
+                    hosts += [format_host(base + (fmt % i),ipaddr)]
+            else:
+                hosts += [format_host(base+ext,ipaddr)]
+    else:
+        hosts += [format_host(fname,ipaddr)]
+    return hosts
+
+# Ignoring the batch environment is
+# the most important thing. It can
+# cause generation of physl source
+# to hang.
+cfg = [
+    "hpx.run_hpx_main!=1",
+    "hpx.commandline.allow_unknown!=1",
+    "hpx.commandline.aliasing!=0",
+    "hpx.os_threads!=1",
+    "hpx.diagnostics_on_terminate!=0",
+    "hpx.ignore_batch_env!=1",
+]
+
+PhylanxSession.config(cfg)
 
 def to_string(obj):
     return re.sub(b'\\s',b'',codecs.encode(pickle.dumps(obj),'base64'))
@@ -138,17 +187,19 @@ with open("call_{funname}.physl","w") as fw:
             for i in range(np):
                 print("localhost",file=fd)
 
+from random import randint
 from subprocess import Popen, PIPE
-use_mpi = True
-open("/hpx/build/CMakeCache.txt", "r") as fd:
+use_mpi = False
+has_mpi = False
+with open("/hpx/build/CMakeCache.txt", "r") as fd:
     for line in fd.readlines():
         g = re.match(r'HPX_WITH_PARCELPORT_MPI:BOOL=(\w+)',line)
         if g:
             val = g.group(1).lower()
             if val == "on":
-                use_mpi = True
+                has_mpi = True
             elif vall == "off":
-                use_mpi = False
+                has_mpi = False
             else:
                 raise Exception("Bad MPI parcelport value")
             break
@@ -157,8 +208,15 @@ if use_mpi:
     cmd += ["mpirun","-np",str(np)]
     #"-machinefile",machf,
 else:
-    cmd += ["hpxrun.py","-l",str(np)]
-cmd += [os.environ["PHYSL_EXE"]]
+    hpxrun = "./hpxrun-jetlag.py"
+    port = str(randint(7900,8000))
+    cmd += ["python3",hpxrun,"-d",port,"-l",str(np),"--environ=APEX_OTF2,APEX_PAPI_METRICS,APEX_EVENT_FILTER_FILE,PWD"]
+    if "SLURM_NODELIST" in os.environ:
+        hosts = unslurm(os.environ["SLURM_NODELIST"],True)
+        print("HOSTS:",hosts)
+        if len(hosts) > 1:
+            cmd += ["-n",','.join(hosts)]
+cmd += [os.environ.get("PHYSL_EXE","/usr/local/build/physl")]
 if not use_mpi:
     cmd += ["--"]
 cmd += [
@@ -171,6 +229,8 @@ cmd += [
 ]
 print("cmd:",' '.join(cmd))
 print("cmd:",' '.join(cmd),file=sys.stderr)
+os.environ["APEX_OTF2"]="1"
+#os.environ["APEX_EVENT_FILTER_FILE"]="filter.json"
 p = Popen(cmd,stdout=PIPE,stderr=PIPE,universal_newlines=True)
 out, err = p.communicate()
 print(out,end='')
