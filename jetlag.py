@@ -1161,10 +1161,11 @@ class Universal:
         files = self.fill({
             'fileToUpload': (file_name, file_contents)
         })
-        if self.values["utype"] == 'tapis':
-            url = self.fill('{apiurl}/files/v2/media/system/{storage_id}//{home_dir}/'+dir_name)
-        else:
-            url = self.fill('{apiurl}/files/v2/media/system/{storage_id}/'+dir_name)
+        # Tapis behavior seems to now match Agave
+        #if self.values["utype"] == 'tapis':
+        #    url = self.fill('{apiurl}/files/v2/media/system/{storage_id}//{home_dir}/'+dir_name)
+        #else:
+        url = self.fill('{apiurl}/files/v2/media/system/{storage_id}/'+dir_name)
         pause()
         pause()
         response = requests.post(url, headers=headers, files=files)
