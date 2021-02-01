@@ -23,6 +23,9 @@ def all(mname, args, kargs, verbose=False):
                 h[k] = "[hidden]"
         else:
             auth = None
+        h = kargs.get("auth",None)
+        if h and type(h) == tuple:
+            kargs["auth"] = (h[0],"[hidden]")
         pp.pprint(kargs)
         if auth is not None:
             h[k] = auth
