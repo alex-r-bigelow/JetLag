@@ -10,13 +10,13 @@ import re
 # Test creation of shelob configuration using Agave
 uv = Universal()
 uv.init(
-  backend = backend_agave2,
+  backend = backend_agave,
   notify = '{NOTIFY_URL_PASSWORD}',
   **rostam
 )
 os.unlink(uv.get_auth_file())
 uv.init(
-  backend = backend_agave2,
+  backend = backend_agave,
   notify = '{NOTIFY_URL_PASSWORD}',
   **rostam
 )
