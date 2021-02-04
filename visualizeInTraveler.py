@@ -3,6 +3,7 @@ import inspect
 from datetime import datetime
 from urllib.parse import quote_plus
 import requests
+import json
 import subprocess
 import os
 import contextlib, io
@@ -18,11 +19,11 @@ if "TRAVELER_PORT" in os.environ:
     traveler_port = int(os.environ["TRAVELER_PORT"])
 else:
     traveler_port = 8000
-base_url = "http://localhost:%d" % traveler_port
 
-def print_chunks(resp):
-    for chunk in resp.iter_content():
-        print(chunk.decode(),end='')
+# Allow environment variable to redirect output to something other than
+# localhost; e.g. a traveler instance outside the docker container or a
+# different machine
+base_url = "http://%s:%d" % (os.environ.get("TRAVELER_IP", "localhost"), traveler_port)
 
 def in_notebook():
     try:
@@ -30,6 +31,17 @@ def in_notebook():
         return True
     except:
         return False
+
+def parse_traveler_response(resp, verbose):
+    result = resp.json()
+    # TODO: can use resp.iter_content(chunk_size=None, decode_unicode=True) to
+    # catch and print partial JSON while the data is bundling (instead of
+    # waiting for the whole process to finish), but displaying updates in
+    # Jupyter would require a fancier widget that we can update round-trip
+    # style...
+    if verbose:
+        print(result['log'])
+    return result
 
 def visualizeInTraveler(fun, verbose=False):
     fun_id = randint(0,2<<31)
@@ -49,75 +61,73 @@ def visualizeInTraveler(fun, verbose=False):
         print_physl_src(physl_src_raw)
 
     argMap = {
+        "label":  fun_id,                       # Dataset label (doesn't need to be unique)
+        "tags":   [fun_name, 'Ran via JetLag'], # Can attach any string as a tag
         "csv":    fun.__perfdata__[0],
         "newick": fun.__perfdata__[1],
         "dot":    fun.__perfdata__[2],
         "physl":  f.getvalue(),
         "python": fun.get_python_src(fun.backend.wrapped_function)
     }
+
     import requests
-    base_url = "http://localhost:8000"
-    
-    # This loop iterates until we've found an unused id
-    while True:
-        url = base_url + '/datasets/%s-%d' % (fun_name, fun_id)
-        fun_id = randint(0, 2<<31)
-        resp = requests.post(url, json=argMap)
-        if "already exists" not in resp.content.decode():
-            break
-    if verbose:
-        print(resp.content.decode())
-        
+    resp = requests.post(base_url + '/datasets', json=argMap, stream=True)
+    resp.raise_for_status()
+    trav_id = parse_traveler_response(resp, verbose)['datasetId']
+
     otf2Path = 'OTF2_archive/APEX.otf2'
     if os.path.exists(otf2Path):
         # Upload the OTF2 trace separately because we want to stream its
         # contents instead of trying to load the whole thing into memory
         def iterOtf2():
             otfPipe = subprocess.Popen(['otf2-print', otf2Path], stdout=subprocess.PIPE)
-            for line in otfPipe.stdout:
-                yield line
+            for bytesChunk in otfPipe.stdout:
+                yield bytesChunk
         otf2Response = requests.post(
-            url + '/otf2',
+            base_url + '/datasets/%s/otf2' % trav_id,
             stream=True,
             data=iterOtf2(),
             headers={'content-type': 'text/text'}
         )
-        if verbose:
-            print_chunks(otf2Response)
+        otf2Response.raise_for_status()
+        parse_traveler_response(otf2Response, verbose)
     if in_notebook():
-        display(HTML("<a target='the-viz' href='"+base_url+"/static/interface.html?x=%f'>Visualize %s-%d</a>" % (random(), fun_name, fun_id)))
+        display(HTML("<a target='the-viz' href='"+base_url+"/static/interface.html#%s'>Visualize %s-%d</a>" % (trav_id, fun_name, fun_id)))
     else:
         print("URL:", base_url+"/static/interface.html")
 
 
 def visualizeDirInTraveler(jobid, pre, verbose=False):
-
-    # The only requirement is a label
-    if not os.path.exists(pre+'/label.txt'):
-        raise Exception("No label provided; can't visualize performance data")
+    # Read any small text files that exist
+    argMap = {
+        'csv':    pre+'/py-csv.txt',
+        'newick': pre+'/py-tree.txt',
+        'dot':    pre+'/py-graph.txt',
+        'physl':  pre+'/physl-src.txt',
+        'python': pre+'/py-src.txt'
+    }
+    postData = {
+        "tags":   ['Ran via JetLag']
+    }
     with open(pre+'/label.txt', 'r') as fd:
         label = fd.read().strip()
     label += "@"+jobid
-
-    # Read any small text files that exist
-    argMap = {
-        'csv': pre+'/py-csv.txt',
-        'newick': pre+'/py-tree.txt',
-        'dot': pre+'/py-graph.txt',
-        'physl': pre+'/physl-src.txt',
-        'python': pre+'/py-src.txt'
-    }
-    postData = {}
     for arg, path in argMap.items():
         if os.path.exists(path):
             with open(path, 'r') as fd:
                 postData[arg] = fd.read()
 
+    # Attach a label if one exists (no longer a requirement; traveler will
+    # default to "Untitled Dataset" if no label is provided)
+    if os.path.exists(pre+'/label.txt'):
+        with open(pre+'/label.txt', 'r') as fd:
+            label = fd.read().strip()
+        postData['label'] = label + "@" + jobid
+
     # Create the dataset in traveler
-    url = base_url + '/datasets/%s' % quote_plus(label)
-    mainResponse = requests.post(url, json=postData)
-    if verbose:
-        print_chunks(mainResponse)
+    mainResponse = requests.post(base_url + '/datasets', json=postData)
+    mainResponse.raise_for_status()
+    trav_id = parse_traveler_response(mainResponse, verbose)['datasetId']
 
     otf2Path = pre+'/OTF2_archive/APEX.otf2'
     if os.path.exists(otf2Path):
@@ -125,20 +135,19 @@ def visualizeDirInTraveler(jobid, pre, verbose=False):
         # contents instead of trying to load the whole thing into memory
         def iterOtf2():
             otfPipe = subprocess.Popen(['otf2-print', otf2Path], stdout=subprocess.PIPE)
-            for line in otfPipe.stdout:
-                yield line
+            for bytesChunk in otfPipe.stdout:
+                yield bytesChunk
         otf2Response = requests.post(
-            url + '/otf2',
+            base_url + '/datasets/%s/otf2' % trav_id,
             stream=True,
             data=iterOtf2(),
             headers={'content-type': 'text/text'}
         )
-        if verbose:
-            print_chunks(otf2Response)
+        parse_traveler_response(otf2Response, verbose)
     else:
         otf2Response = None
     if in_notebook():
-        display(HTML("<a target='the-viz' href='"+base_url+"/static/interface.html?x=%f'>Visualize %s</a>" % (random(), label)))
+        display(HTML("<a target='the-viz' href='"+base_url+"/static/interface.html#%s'>Visualize %s</a>" % (trav_id, label)))
     else:
         print("URL:", base_url+"/static/interface.html")
     return (mainResponse, otf2Response)

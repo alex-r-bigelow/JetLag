@@ -1,12 +1,12 @@
 FROM stevenrbrandt/phylanx.rel.test:working
 USER root
-RUN dnf install -y curl findutils vim git which jq python3 python3-pip gcc gcc-c++ python3-devel sudo glibc-langpack-en otf2 ntpdate procps-ng
+RUN dnf install -y curl findutils vim git which jq gcc gcc-c++ sudo glibc-langpack-en otf2 ntpdate procps-ng
 
 # Set up jupyter
 RUN pip3 install jupyter requests numpy scipy matplotlib tzupdate email-validator gui_fun
 
 WORKDIR /
-RUN git clone -b main https://github.com/hdc-arizona/traveler-integrated
+RUN git clone -b ui-overhaul https://github.com/hdc-arizona/traveler-integrated
 WORKDIR /traveler-integrated
 RUN find . | xargs chown jovyan
 RUN pip3 install -r requirements.txt
@@ -15,7 +15,7 @@ RUN python3 rp_extension_build.py
 RUN mv _cCalcBin.*.so ..
 
 WORKDIR /
-RUN git clone https://github.com/STEllAR-GROUP/JetLag.git
+RUN git clone --branch ui-overhaul https://github.com/alex-r-bigelow/JetLag.git
 WORKDIR /JetLag
 RUN find . | xargs chown jovyan
 
