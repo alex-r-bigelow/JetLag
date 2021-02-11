@@ -113,8 +113,7 @@ def visualizeDirInTraveler(jobid, pre, verbose=False):
         "tags":   ['Ran via JetLag']
     }
     with open(pre+'/label.txt', 'r') as fd:
-        label = fd.read().strip()
-    label += "/"+jobid # puts jobs with the same label in a folder
+        postData['label'] = fd.read().strip()
     for arg, path in argMap.items():
         if os.path.exists(path):
             with open(path, 'r') as fd:
