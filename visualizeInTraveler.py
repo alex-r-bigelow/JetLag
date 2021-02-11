@@ -60,9 +60,12 @@ def visualizeInTraveler(fun, verbose=False):
     with contextlib.redirect_stdout(f):
         print_physl_src(physl_src_raw)
 
+    # Note: dataset label is optional + no longer needs to be unique;
+    # defaults to "Untitled dataset" if omitted;
+    # '/' characters inside the label will be interpreted as parent folders
     argMap = {
-        "label":  fun_id,                       # Dataset label (doesn't need to be unique)
-        "tags":   [fun_name, 'Ran via JetLag'], # Can attach any string as a tag
+        "label":  fun_id,
+        "tags":   [fun_name, 'JetLag'], # Can attach any string as a tag
         "csv":    fun.__perfdata__[0],
         "newick": fun.__perfdata__[1],
         "dot":    fun.__perfdata__[2],
@@ -111,18 +114,11 @@ def visualizeDirInTraveler(jobid, pre, verbose=False):
     }
     with open(pre+'/label.txt', 'r') as fd:
         label = fd.read().strip()
-    label += "@"+jobid
+    label += "/"+jobid # puts jobs with the same label in a folder
     for arg, path in argMap.items():
         if os.path.exists(path):
             with open(path, 'r') as fd:
                 postData[arg] = fd.read()
-
-    # Attach a label if one exists (no longer a requirement; traveler will
-    # default to "Untitled Dataset" if no label is provided)
-    if os.path.exists(pre+'/label.txt'):
-        with open(pre+'/label.txt', 'r') as fd:
-            label = fd.read().strip()
-        postData['label'] = label + "@" + jobid
 
     # Create the dataset in traveler
     mainResponse = requests.post(base_url + '/datasets', json=postData)
