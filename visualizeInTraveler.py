@@ -113,7 +113,7 @@ def visualizeDirInTraveler(jobid, pre, verbose=False):
         "tags":   ['Ran via JetLag']
     }
     with open(pre+'/label.txt', 'r') as fd:
-        postData['label'] = fd.read().strip()
+        postData['label'] = label = fd.read().strip()
     for arg, path in argMap.items():
         if os.path.exists(path):
             with open(path, 'r') as fd:
