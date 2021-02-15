@@ -84,8 +84,9 @@ def visualizeInTraveler(fun, verbose=False):
         # contents instead of trying to load the whole thing into memory
         def iterOtf2():
             otfPipe = subprocess.Popen(['otf2-print', otf2Path], stdout=subprocess.PIPE)
-            for line in iter(otfPipe.stdout.readline, b''):
-                yield line
+            for bytesChunk in otfPipe.stdout:
+                yield bytesChunk
+                otfPipe.stdout.flush()
         otf2Response = requests.post(
             base_url + '/datasets/%s/otf2' % trav_id,
             stream=True,
@@ -131,8 +132,9 @@ def visualizeDirInTraveler(jobid, pre, verbose=False):
         # contents instead of trying to load the whole thing into memory
         def iterOtf2():
             otfPipe = subprocess.Popen(['otf2-print', otf2Path], stdout=subprocess.PIPE)
-            for line in iter(otfPipe.stdout.readline, b''):
-                yield line
+            for bytesChunk in otfPipe.stdout:
+                yield bytesChunk
+                otfPipe.stdout.flush()
         otf2Response = requests.post(
             base_url + '/datasets/%s/otf2' % trav_id,
             stream=True,
